@@ -2939,15 +2939,13 @@ function dayShift(d,n){
 }
 function computeStreak(){
   const today=new Date();
-  // 오늘 아직 안 했어도 어제까지 이어졌으면 연속으로 인정
   let cur=0;
   let start = hasWorkout(ymd(today)) ? 0 : 1;
   for(let i=start;i<400;i++){
     if(hasWorkout(ymd(dayShift(today,-i)))) cur++;
     else break;
   }
-  // 이번 주(월~일)
-  const dow=(today.getDay()+6)%7; // 월=0
+  const dow=(today.getDay()+6)%7;
   const week=[];
   for(let i=0;i<7;i++){
     const d=dayShift(today,-dow+i);
@@ -2955,18 +2953,26 @@ function computeStreak(){
   }
   const weekCount=week.filter(w=>w.on).length;
 
-  // 이번 달 총 일수
-  const pre=ymd(today).slice(0,8);
+  // 지금 보고 있는 달 기준으로 집계
+  const vy=calCursor.getFullYear(), vm=calCursor.getMonth();
+  const vPrefix=`${vy}-${String(vm+1).padStart(2,'0')}-`;
   let month=0;
   Object.keys(calData).forEach(k=>{
-    if(k.startsWith(ymd(today).slice(0,7)+'-') && hasWorkout(k)) month++;
+    if(k.startsWith(vPrefix) && hasWorkout(k)) month++;
   });
-  return {cur,week,weekCount,month};
+  const isCurrentMonth = (vy===today.getFullYear() && vm===today.getMonth());
+  return {cur,week,weekCount,month,isCurrentMonth,viewMonth:vm+1};
 }
 function renderStreak(){
   const box=document.getElementById('streakBox');
   if(!box)return;
   const st=computeStreak();
+  if(!st.isCurrentMonth){
+    box.innerHTML=`<div class="streak-row">
+      <div class="streak-card"><span class="streak-num">${st.month}</span><span class="streak-lb">${st.viewMonth}월 운동한 날</span></div>
+    </div>`;
+    return;
+  }
   box.innerHTML=`<div class="streak-row">
     <div class="streak-card"><span class="streak-num${st.cur>=2?' hot':''}">${st.cur}</span><span class="streak-lb">연속</span></div>
     <div class="streak-card"><span class="streak-num${st.weekCount>=3?' hot':''}">${st.weekCount}</span><span class="streak-lb">이번 주</span></div>
