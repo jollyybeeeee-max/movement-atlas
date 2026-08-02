@@ -2863,7 +2863,7 @@ let shareMode='out';
 function openShareOut(routine){
   shareMode='out';
   document.getElementById('shareTitle').textContent='루틴 공유';
-  document.getElementById('shareDesc').innerHTML='아래 코드를 복사해 친구에게 보내세요.<br>친구는 "코드로 루틴 가져오기"에 붙여넣으면 돼요.';
+  document.getElementById('shareDesc').innerHTML='아래 버튼을 누르면 공유창이 열려요.<br>카톡 등으로 바로 보내면 코드가 잘리지 않아요.';
   document.getElementById('shareLabel').textContent='공유 코드';
   // 동작 이름과 순서만 담아 코드를 짧게 유지 (큐잉은 받는 사람 도감에서 채움)
   const payload={
@@ -2872,7 +2872,7 @@ function openShareOut(routine){
     p:routine.plan.map(x=>x.name)
   };
   document.getElementById('shareCode').value='MA2:'+b64encode(payload);
-  document.getElementById('shareAction').textContent='복사';
+  document.getElementById('shareAction').textContent='공유하기';
   ovShare.classList.add('show');
 }
 
@@ -2889,15 +2889,51 @@ function openShareIn(){
 ovShare.addEventListener('click',e=>{if(e.target===ovShare)ovShare.classList.remove('show');});
 document.getElementById('shareClose').addEventListener('click',()=>ovShare.classList.remove('show'));
 
+async function copyCode(text){
+  // 1) 표준 클립보드 API
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  // 2) 예전 방식 (인앱 브라우저 대응)
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text;
+    ta.setAttribute('readonly','');
+    ta.style.position='fixed';
+    ta.style.top='0'; ta.style.left='0';
+    ta.style.opacity='0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0,text.length);
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(ok) return true;
+  }catch(e){}
+  return false;
+}
+
 document.getElementById('shareAction').addEventListener('click',async()=>{
   const box=document.getElementById('shareCode');
   if(shareMode==='out'){
-    try{
-      await navigator.clipboard.writeText(box.value);
-      toast('코드를 복사했어요');
-    }catch(e){
+    const text=box.value;
+    // 공유 시트가 있으면 그걸로 바로 보내기 (복사 과정 자체를 생략)
+    if(navigator.share){
+      try{
+        await navigator.share({text});
+        return;
+      }catch(e){ /* 취소하면 아래 복사로 진행 */ }
+    }
+    const ok=await copyCode(text);
+    if(ok){ toast(`코드를 복사했어요 (${text.length}자)`); }
+    else{
+      box.focus();
       box.select();
-      toast('길게 눌러 복사해주세요');
+      try{ box.setSelectionRange(0,text.length); }catch(e){}
+      toast('전체가 선택됐어요 · 복사를 눌러주세요');
     }
     return;
   }
@@ -2920,7 +2956,7 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     data=b64decode(raw);
   }catch(e){
     console.error('decode',e,raw.length);
-    toast('코드가 중간에 잘린 것 같아요 · 다시 복사해주세요');
+    toast(`코드가 잘린 것 같아요 (${raw.length}자) · 전체를 복사해주세요`);
     return;
   }
 
@@ -3271,7 +3307,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'08', d:'2026-07-24', body:'루틴 가져오기 — 저장 후 목록 갱신에서 오류가 나도 루틴은 유지되도록 분리\n실패 시 실제 오류 내용 표시'}
+  {v:'09', d:'2026-07-24', body:'루틴 공유 — 복사 대신 공유창으로 바로 보내도록 변경 (코드 잘림 방지)\n인앱 브라우저에서도 복사되도록 대체 방식 추가\n코드가 잘렸을 때 글자 수를 함께 표시'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
