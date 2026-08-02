@@ -2925,18 +2925,25 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
   }
 
   try{
-    let name, minutes, names, cues=[], roles=[];
+    let name, minutes, names=[], cues=[], roles=[];
 
-    if(legacy || (data && data.t==='routine')){        // 예전 형식
-      const r=data.r||{};
+    // 형식을 가리지 않고 담긴 모양대로 읽음
+    const r=(data&&data.r)?data.r:null;
+    if(r&&Array.isArray(r.plan)){                 // 예전 형식 {t,r:{plan:[{name,cue}]}}
       name=r.name; minutes=r.minutes;
-      names=(r.plan||[]).map(x=>x.name);
-      cues=(r.plan||[]).map(x=>x.cue||'');
-      roles=(r.plan||[]).map(x=>x.role||'');
-    }else{                                             // 새 형식
-      name=data.n; minutes=data.m; names=data.p||[];
+      names=r.plan.map(x=>(typeof x==='string')?x:(x&&x.name));
+      cues =r.plan.map(x=>(x&&x.cue)||'');
+      roles=r.plan.map(x=>(x&&x.role)||'');
+    }else if(data&&Array.isArray(data.p)){        // 새 형식 {n,m,p:[이름]}
+      name=data.n; minutes=data.m;
+      names=data.p.map(x=>(typeof x==='string')?x:(x&&x.name));
+    }else if(data&&Array.isArray(data.plan)){     // 혹시 모를 다른 모양
+      name=data.name; minutes=data.minutes;
+      names=data.plan.map(x=>(typeof x==='string')?x:(x&&x.name));
+      cues =data.plan.map(x=>(x&&x.cue)||'');
     }
-    if(!Array.isArray(names)||!names.length) throw new Error('형식 오류');
+    names=(names||[]).filter(Boolean);
+    if(!names.length) throw new Error('동작 목록을 찾지 못함 (키: '+Object.keys(data||{}).join(',')+')');
 
     // 내 도감에 같은 동작이 있으면 큐잉을 채워 넣기
     const mine=allItems();
@@ -2959,11 +2966,12 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     });
     await saveRoutines();
     ovShare.classList.remove('show');
-    renderSaved();
+    // 목록 렌더링에서 문제가 생겨도 저장은 유지되도록 분리
+    try{ renderSaved(); }catch(e){ console.error('renderSaved',e); }
     toast(missing?`가져왔어요 · ${missing}개는 도감에 없어요`:'루틴을 가져왔어요');
   }catch(err){
     console.error('import',err);
-    toast('루틴 정보를 읽지 못했어요 · 코드를 다시 확인해주세요');
+    toast('오류: '+String(err&&err.message||err).slice(0,60));
   }
 });
 
@@ -3263,7 +3271,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'06', d:'2026-07-24', body:'루틴 가져오기 대폭 보강 — 줄바꿈·보이지 않는 문자·대화문이 섞여도 인식\n실패 시 원인을 알려주도록 안내 문구 세분화\n예전 형식(MA1) 코드도 계속 호환'}
+  {v:'08', d:'2026-07-24', body:'루틴 가져오기 — 저장 후 목록 갱신에서 오류가 나도 루틴은 유지되도록 분리\n실패 시 실제 오류 내용 표시'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
