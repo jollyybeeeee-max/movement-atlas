@@ -694,7 +694,7 @@
   .masthead::before{
     top:-120px; right:-95px; width:250px; height:250px;
   }
-  .rule-top{ margin-bottom:24px !important; font-size:9.5px; }
+  .rule-top{ margin-bottom:24px !important; font-size:9.5px; align-items:center; }
   .wordmark{
     font-size:46px !important;
     line-height:1.02;
@@ -1002,14 +1002,62 @@
     font-size:10.5px;color:var(--bone-faint);
     margin-top:5px;
   }
+
+  /* ===== 설정 ===== */
+  .gear{
+    border:none;
+    background:transparent;
+    color:var(--bone-faint);
+    cursor:pointer;
+    padding:0;
+    margin:0;
+    display:inline-flex;
+    align-items:center;
+    line-height:1;
+    flex:0 0 auto;
+  }
+  .gear svg{ width:12px;height:12px;display:block;transform:translateY(0.25px); }
+  .gear:active{ color:var(--bone); }
+  .set-group{ border-bottom:1px solid var(--hair); padding:6px 0 18px; margin-bottom:18px; }
+  .set-group:last-of-type{ border-bottom:none; }
+  .set-row{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 0;
+    cursor:pointer;
+  }
+  .set-row-name{ flex:1;font-size:14px;font-weight:300; }
+  .set-row-val{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;color:var(--bone-faint);
+    text-align:right;
+  }
+  .set-row-arrow{ color:var(--bone-faint);font-size:12px; }
+  .ver-item{
+    padding:14px 0;border-bottom:1px solid var(--hair);
+  }
+  .ver-top{
+    display:flex;align-items:baseline;gap:10px;margin-bottom:6px;
+  }
+  .ver-no{
+    font-family:'Fraunces',serif;font-size:15px;font-weight:500;
+  }
+  .ver-date{
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--bone-faint);
+    margin-left:auto;
+  }
+  .ver-body{
+    font-size:12.5px;line-height:1.75;color:var(--bone-dim);font-weight:300;
+    white-space:pre-line;
+  }
+  .ver-item.now .ver-no{ color:var(--ember); }
 </style>
 </head>
 <body>
 
 <header class="masthead">
   <div class="rule-top">
-    <span>Personal Training Archive</span>
-    <span>Vol. 01</span>
+    <span>Personal Training Archive · <span id="mastVer">Vol. 01</span></span>
+    <button class="gear" id="gearBtn" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
   <h1 class="wordmark">Movement<br><em>Atlas</em></h1>
   <p class="hangul">움직임의 결</p>
@@ -1251,6 +1299,58 @@
   </div>
 </div>
 
+<div class="ov" id="ovSettings">
+  <div class="sheet">
+    <h3>설정</h3>
+
+    <div class="set-group">
+      <div class="set-row" id="setGoal">
+        <span class="set-row-name">목표</span>
+        <span class="set-row-val" id="setGoalVal"></span>
+        <span class="set-row-arrow">›</span>
+      </div>
+      <div class="set-row" id="setStatus">
+        <span class="set-row-name">몸 상태</span>
+        <span class="set-row-val" id="setStatusVal"></span>
+        <span class="set-row-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-row" id="setExport">
+        <span class="set-row-name">백업 내보내기</span>
+        <span class="set-row-arrow">›</span>
+      </div>
+      <div class="set-row" id="setImport">
+        <span class="set-row-name">백업 불러오기</span>
+        <span class="set-row-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="set-group">
+      <div class="set-row" id="setVersion">
+        <span class="set-row-name">버전 기록</span>
+        <span class="set-row-val" id="setVersionVal"></span>
+        <span class="set-row-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="acts">
+      <button class="btn btn-g" id="setClose" style="flex:1">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovVersion">
+  <div class="sheet">
+    <h3>버전 기록</h3>
+    <div id="versionList" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="acts">
+      <button class="btn btn-g" id="verClose" style="flex:1">닫기</button>
+    </div>
+  </div>
+</div>
+
 <div class="ov" id="ovPick">
   <div class="sheet">
     <h3>동작 추가</h3>
@@ -1280,11 +1380,7 @@
 
 <div class="toast" id="toast"></div>
 
-<div class="backup-row">
-  <button id="btnGoal">목표</button>
-  <button id="btnStatus">몸 상태</button>
-</div>
-<div class="backup-row">
+<div class="backup-row" style="display:none;">
   <button id="btnExport">백업 내보내기</button>
   <button id="btnImport">백업 불러오기</button>
   <input type="file" id="importFile" accept="application/json,.json" style="display:none;">
@@ -1296,7 +1392,7 @@
   <div class="signature">
     <span class="sig-rule"></span>
     <span class="sig-name">Designed &amp; built by JEP</span>
-    <span class="sig-year">2026</span>
+    <span class="sig-year" id="sigVer">2026</span>
   </div>
 </div>
 
@@ -2673,7 +2769,6 @@ function openGoal(){
   paint();
   ovGoal.classList.add('show');
 }
-document.getElementById('btnGoal').addEventListener('click',openGoal);
 ovGoal.addEventListener('click',e=>{if(e.target===ovGoal)ovGoal.classList.remove('show');});
 document.getElementById('goalCancel').addEventListener('click',()=>ovGoal.classList.remove('show'));
 document.getElementById('goalSave').addEventListener('click',async()=>{
@@ -2711,7 +2806,6 @@ function openStatus(){
   paint();
   ovStatus.classList.add('show');
 }
-document.getElementById('btnStatus').addEventListener('click',openStatus);
 ovStatus.addEventListener('click',e=>{if(e.target===ovStatus)ovStatus.classList.remove('show');});
 document.getElementById('stCancel').addEventListener('click',()=>ovStatus.classList.remove('show'));
 document.getElementById('stSave').addEventListener('click',async()=>{
@@ -2743,10 +2837,15 @@ function paintLede(){
 
 /* ===== 루틴 공유 · 가져오기 · 성적표 ===== */
 function b64encode(obj){
-  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  const raw=btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  // 메신저에서 깨지지 않도록 URL-safe 문자로 치환
+  return raw.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
 function b64decode(str){
-  return JSON.parse(decodeURIComponent(escape(atob(str.trim()))));
+  let s=String(str).replace(/\s+/g,'');          // 공백·줄바꿈 모두 제거
+  s=s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length%4) s+='=';
+  return JSON.parse(decodeURIComponent(escape(atob(s))));
 }
 
 const ovShare=document.getElementById('ovShare');
@@ -2757,11 +2856,13 @@ function openShareOut(routine){
   document.getElementById('shareTitle').textContent='루틴 공유';
   document.getElementById('shareDesc').innerHTML='아래 코드를 복사해 친구에게 보내세요.<br>친구는 "코드로 루틴 가져오기"에 붙여넣으면 돼요.';
   document.getElementById('shareLabel').textContent='공유 코드';
-  const payload={t:'routine',v:1,r:{
-    name:routine.name,parts:routine.parts,minutes:routine.minutes,caution:routine.caution,
-    plan:routine.plan.map(p=>({name:p.name,role:p.role,cue:p.cue}))
-  }};
-  document.getElementById('shareCode').value='MA1:'+b64encode(payload);
+  // 동작 이름과 순서만 담아 코드를 짧게 유지 (큐잉은 받는 사람 도감에서 채움)
+  const payload={
+    n:routine.name,
+    m:routine.minutes||0,
+    p:routine.plan.map(x=>x.name)
+  };
+  document.getElementById('shareCode').value='MA2:'+b64encode(payload);
   document.getElementById('shareAction').textContent='복사';
   ovShare.classList.add('show');
 }
@@ -2791,24 +2892,52 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     }
     return;
   }
-  // 가져오기
+
   let raw=box.value.trim();
-  if(raw.startsWith('MA1:')) raw=raw.slice(4);
+  const m=raw.match(/MA[12]:([A-Za-z0-9+/=_-]+)/);   // 앞뒤에 다른 글자가 붙어도 코드만 추출
+  if(m) raw=m[1];
+  const legacy=/MA1:/.test(box.value);
+
   try{
     const data=b64decode(raw);
-    if(!data||data.t!=='routine'||!data.r||!Array.isArray(data.r.plan)) throw new Error('형식 오류');
-    const r=data.r;
+    let name, minutes, names, cues=[], roles=[];
+
+    if(legacy || (data && data.t==='routine')){        // 예전 형식
+      const r=data.r||{};
+      name=r.name; minutes=r.minutes;
+      names=(r.plan||[]).map(x=>x.name);
+      cues=(r.plan||[]).map(x=>x.cue||'');
+      roles=(r.plan||[]).map(x=>x.role||'');
+    }else{                                             // 새 형식
+      name=data.n; minutes=data.m; names=data.p||[];
+    }
+    if(!Array.isArray(names)||!names.length) throw new Error('형식 오류');
+
+    // 내 도감에 같은 동작이 있으면 큐잉을 채워 넣기
+    const mine=allItems();
+    let missing=0;
+    const plan=names.map((nm,i)=>{
+      const hit=mine.find(x=>x.name===nm);
+      if(!hit) missing++;
+      return {
+        name:nm,
+        role:roles[i]||(hit?(CATS.find(c=>c.key===hit.cat)||{}).label||'':''),
+        cue:(hit&&hit.cue)||cues[i]||'(내 도감에 없는 동작이에요)',
+        record:''
+      };
+    });
+
     savedRoutines.push({
-      name:(r.name||'받은 루틴'),
-      parts:r.parts||[],minutes:r.minutes||30,caution:!!r.caution,
-      plan:r.plan.map(p=>({name:p.name,role:p.role||'',cue:p.cue||'',record:''})),
-      date:new Date().toISOString().slice(0,10)
+      name:name||'받은 루틴',
+      parts:[],minutes:minutes||estimateMinutes(plan),caution:false,custom:true,memo:'',
+      plan,date:new Date().toISOString().slice(0,10)
     });
     await saveRoutines();
     ovShare.classList.remove('show');
     renderSaved();
-    toast('루틴을 가져왔어요');
+    toast(missing?`가져왔어요 · ${missing}개는 도감에 없어요`:'루틴을 가져왔어요');
   }catch(err){
+    console.error(err);
     toast('코드를 확인해주세요');
   }
 });
@@ -3105,6 +3234,53 @@ function openStepPicker(){
 document.getElementById('pickSearch').addEventListener('input',e=>renderPickList(e.target.value));
 ovPick.addEventListener('click',e=>{if(e.target===ovPick)ovPick.classList.remove('show');});
 document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classList.remove('show'));
+
+
+/* ===== 버전 기록 ===== */
+const CHANGELOG=[
+  {v:'03', d:'2026-07-24', body:'설정에서 버전 기록을 이번 버전부터만 표시\n설정 버튼 위치·테두리 정리\n루틴 공유 코드를 짧게 개선 — 메신저로 보내도 깨지지 않도록 수정\n받은 코드에 공백·줄바꿈이 섞여도 인식'}
+];
+const APP_VERSION=CHANGELOG[0].v;
+
+(function(){const sv=document.getElementById('sigVer');if(sv)sv.textContent='VOL. '+APP_VERSION+' · 2026';const mv=document.getElementById('mastVer');if(mv)mv.textContent='Vol. '+APP_VERSION;})();
+
+const ovSettings=document.getElementById('ovSettings');
+const ovVersion=document.getElementById('ovVersion');
+
+function paintSettings(){
+  const g=(typeof goalObj==='function')?goalObj():null;
+  document.getElementById('setGoalVal').textContent=g?g.label:'';
+  const wp=(typeof warnParts==='function')?warnParts():[];
+  document.getElementById('setStatusVal').textContent=
+    wp.length?wp.map(b=>b.label).join(' · '):'이상 없음';
+  document.getElementById('setVersionVal').textContent='Vol. '+APP_VERSION;
+}
+function openSettings(){ paintSettings(); ovSettings.classList.add('show'); }
+
+document.getElementById('gearBtn').addEventListener('click',openSettings);
+ovSettings.addEventListener('click',e=>{if(e.target===ovSettings)ovSettings.classList.remove('show');});
+document.getElementById('setClose').addEventListener('click',()=>ovSettings.classList.remove('show'));
+
+document.getElementById('setGoal').addEventListener('click',()=>{ovSettings.classList.remove('show');openGoal();});
+document.getElementById('setStatus').addEventListener('click',()=>{ovSettings.classList.remove('show');openStatus();});
+document.getElementById('setExport').addEventListener('click',()=>{ovSettings.classList.remove('show');document.getElementById('btnExport').click();});
+document.getElementById('setImport').addEventListener('click',()=>{ovSettings.classList.remove('show');document.getElementById('importFile').click();});
+
+document.getElementById('setVersion').addEventListener('click',()=>{
+  document.getElementById('versionList').innerHTML=CHANGELOG.map((c,i)=>`
+    <div class="ver-item${i===0?' now':''}">
+      <div class="ver-top">
+        <span class="ver-no">Vol. ${c.v}</span>
+        ${i===0?'<span class="badge">현재</span>':''}
+        <span class="ver-date">${c.d}</span>
+      </div>
+      <div class="ver-body">${esc(c.body)}</div>
+    </div>`).join('');
+  ovSettings.classList.remove('show');
+  ovVersion.classList.add('show');
+});
+ovVersion.addEventListener('click',e=>{if(e.target===ovVersion)ovVersion.classList.remove('show');});
+document.getElementById('verClose').addEventListener('click',()=>ovVersion.classList.remove('show'));
 
 /* ---- init ---- */
 renderPickers();
