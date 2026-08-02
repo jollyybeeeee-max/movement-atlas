@@ -2902,14 +2902,29 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     return;
   }
 
-  // 줄바꿈·공백을 먼저 모두 제거한 뒤 코드 추출 (메신저가 줄을 나눠도 안전)
-  let flat=box.value.replace(/\s+/g,'');
-  const legacy=/MA1:/.test(flat);
-  const m=flat.match(/MA[12]:([A-Za-z0-9+/=_-]+)/);
-  let raw = m ? m[1] : flat.replace(/^MA[12]:/,'');
+  // 접두어 이후를 잘라내고, base64에 쓰이는 문자만 남김
+  // (줄바꿈·공백은 물론 메신저가 넣는 보이지 않는 문자까지 제거)
+  const src=box.value;
+  const legacy=/MA1:/.test(src);
+  const at=src.search(/MA[12]:/);
+  let raw=(at>=0?src.slice(at+4):src).replace(/[^A-Za-z0-9+/=_-]/g,'');
+  raw=raw.replace(/^MA[12]/,'');   // 접두어 사이에 보이지 않는 문자가 낀 경우까지 처리
+
+  if(raw.length<16){
+    toast('코드가 너무 짧아요 · 전체가 복사됐는지 확인해주세요');
+    return;
+  }
+
+  let data;
+  try{
+    data=b64decode(raw);
+  }catch(e){
+    console.error('decode',e,raw.length);
+    toast('코드가 중간에 잘린 것 같아요 · 다시 복사해주세요');
+    return;
+  }
 
   try{
-    const data=b64decode(raw);
     let name, minutes, names, cues=[], roles=[];
 
     if(legacy || (data && data.t==='routine')){        // 예전 형식
@@ -2947,8 +2962,8 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     renderSaved();
     toast(missing?`가져왔어요 · ${missing}개는 도감에 없어요`:'루틴을 가져왔어요');
   }catch(err){
-    console.error(err);
-    toast('코드를 확인해주세요');
+    console.error('import',err);
+    toast('루틴 정보를 읽지 못했어요 · 코드를 다시 확인해주세요');
   }
 });
 
@@ -3248,7 +3263,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'05', d:'2026-07-24', body:'입력창 선택 시 화면이 확대되던 문제 수정\n공유용 버전에 S 표식 추가'}
+  {v:'06', d:'2026-07-24', body:'루틴 가져오기 대폭 보강 — 줄바꿈·보이지 않는 문자·대화문이 섞여도 인식\n실패 시 원인을 알려주도록 안내 문구 세분화\n예전 형식(MA1) 코드도 계속 호환'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
