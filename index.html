@@ -1050,6 +1050,15 @@
     white-space:pre-line;
   }
   .ver-item.now .ver-no{ color:var(--ember); }
+
+  /* iOS 입력 시 화면 확대 방지 (16px 미만이면 자동 확대됨) */
+  input, textarea, select,
+  .fld input, .fld select, .fld textarea,
+  .search-wrap input, .eb-memo textarea, #shareCode, #pickSearch{
+    font-size:16px !important;
+  }
+  /* 코드 입력창은 좁게 보이도록 자간만 조정 */
+  #shareCode{ letter-spacing:-0.02em; line-height:1.5; }
 </style>
 </head>
 <body>
@@ -2893,10 +2902,11 @@ document.getElementById('shareAction').addEventListener('click',async()=>{
     return;
   }
 
-  let raw=box.value.trim();
-  const m=raw.match(/MA[12]:([A-Za-z0-9+/=_-]+)/);   // 앞뒤에 다른 글자가 붙어도 코드만 추출
-  if(m) raw=m[1];
-  const legacy=/MA1:/.test(box.value);
+  // 줄바꿈·공백을 먼저 모두 제거한 뒤 코드 추출 (메신저가 줄을 나눠도 안전)
+  let flat=box.value.replace(/\s+/g,'');
+  const legacy=/MA1:/.test(flat);
+  const m=flat.match(/MA[12]:([A-Za-z0-9+/=_-]+)/);
+  let raw = m ? m[1] : flat.replace(/^MA[12]:/,'');
 
   try{
     const data=b64decode(raw);
@@ -3238,7 +3248,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'03', d:'2026-07-24', body:'설정에서 버전 기록을 이번 버전부터만 표시\n설정 버튼 위치·테두리 정리\n루틴 공유 코드를 짧게 개선 — 메신저로 보내도 깨지지 않도록 수정\n받은 코드에 공백·줄바꿈이 섞여도 인식'}
+  {v:'05', d:'2026-07-24', body:'입력창 선택 시 화면이 확대되던 문제 수정\n공유용 버전에 S 표식 추가'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
