@@ -1059,6 +1059,69 @@
   }
   /* 코드 입력창은 좁게 보이도록 자간만 조정 */
   #shareCode{ letter-spacing:-0.02em; line-height:1.5; }
+
+  /* ===== 계열 묶기 ===== */
+  .var-count{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;
+    letter-spacing:0.1em;
+    color:var(--ember);
+    border:1px solid var(--ember);
+    padding:1px 5px;
+    margin-left:7px;
+    vertical-align:2px;
+  }
+  .variant{
+    padding:14px 0;
+    border-top:1px solid var(--hair);
+  }
+  .variant:first-of-type{ border-top:none; padding-top:0; }
+  .variant-name{
+    font-family:'Fraunces',serif;
+    font-weight:500;font-size:14px;
+    margin:0 0 6px;
+  }
+  .variant .rec{ margin-top:8px; }
+
+  /* ===== 세션 실행 ===== */
+  .session-bar{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;
+    border:1px solid var(--ember);
+    margin-bottom:14px;
+  }
+  .session-bar .sb-name{
+    flex:1;font-size:13.5px;font-weight:400;
+  }
+  .session-bar .sb-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:8.5px;letter-spacing:0.14em;
+    color:var(--ember);
+  }
+  .step-log{
+    display:flex;gap:8px;align-items:center;
+    margin-top:10px;
+  }
+  .step-log input{
+    width:70px;padding:7px 0;
+    background:transparent;border:none;border-bottom:1px solid var(--hair-strong);
+    color:var(--bone);font-family:'IBM Plex Mono',monospace;
+    border-radius:0;text-align:center;
+  }
+  .step-log input:focus{outline:none;border-bottom-color:var(--ember);}
+  .step-log .unit{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;color:var(--bone-faint);
+  }
+  .step-log button{
+    margin-left:auto;
+    background:transparent;border:1px solid var(--hair-strong);
+    color:var(--bone-dim);cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9px;letter-spacing:0.12em;
+    padding:7px 12px;
+  }
+  .step-log button.saved{ border-color:var(--ember);color:var(--ember); }
 </style>
 </head>
 <body>
@@ -1378,7 +1441,8 @@
     <p class="est-note" style="padding:0 0 16px;">순서대로 탭하면 그 순서로 저장돼요.<br>PT 숙제나 나만의 루틴을 등록해보세요.</p>
     <div class="fld"><label>루틴 이름</label><input type="text" id="buildName" placeholder="예: 이번 주 숙제"></div>
     <div class="fld"><label>메모 (선택)</label><input type="text" id="buildMemo" placeholder="예: 주 3회, 통증 없으면 무게 올리기"></div>
-    <div id="builderList" style="max-height:46vh;overflow-y:auto;"></div>
+    <input type="text" id="buildSearch" placeholder="동작 검색" style="width:100%;padding:11px 0;margin-bottom:4px;background:transparent;border:none;border-bottom:1px solid var(--hair-strong);color:var(--bone);font-family:'IBM Plex Sans KR',sans-serif;font-weight:300;border-radius:0;">
+    <div id="builderList" style="max-height:44vh;overflow-y:auto;"></div>
     <div class="builder-count" id="builderCount">0개 선택됨</div>
     <div class="acts">
       <button class="btn btn-g" id="buildCancel">Cancel</button>
@@ -1606,8 +1670,62 @@ function renderAtlas(){
       sec.appendChild(p);
     }
 
-    items.forEach((item,idx)=>{
+    groupItems(items).forEach(g=>{
       plateN++;
+      if(!g.single){
+        // 여러 종이 묶인 계열
+        const id='fam:'+c.key+':'+g.fam;
+        const el=document.createElement('div');
+        el.className='entry'+(openState[id]?' open':'');
+        const withPhoto=g.list.find(x=>x.photo);
+        el.innerHTML=`
+          <div class="entry-head">
+            <span class="e-plate">${String(plateN).padStart(3,'0')}</span>
+            ${glyph(c.color,c.region)}
+            <div class="e-main">
+              <p class="e-name">${esc(g.fam)}<span class="var-count">${g.list.length}종</span></p>
+              <div class="e-meta">${esc(g.list.map(x=>x.name).join(' · '))}</div>
+            </div>
+            <span class="e-mark">+</span>
+          </div>
+          <div class="e-body">
+            <div class="e-body-in">
+              <div class="e-glyph-lg">${glyph(c.color,c.region)}</div>
+              <div class="e-text">
+                ${withPhoto?`<img class="e-photo" src="${withPhoto.photo}" alt="">`:''}
+                ${g.list.map(v=>`
+                  <div class="variant">
+                    <p class="variant-name">${esc(v.name)}${v.mine?'<span class="badge">MINE</span>':''}</p>
+                    <p class="cue">${esc(v.cue)}</p>
+                    ${v.record?`<span class="rec">${esc(v.record)}</span>`:''}
+                    ${(v.hist&&v.hist.length>1)?sparkline(v.hist):''}
+                    <div class="e-actions"><button class="txt-btn" data-edit="${v.id}">편집</button></div>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </div>`;
+        const body=el.querySelector('.e-body');
+        const fit=()=>{ if(openState[id]) body.style.maxHeight=body.scrollHeight+'px'; };
+        body.querySelectorAll('img').forEach(im=>{ if(!im.complete) im.addEventListener('load',fit); });
+        if(openState[id]) fit();
+        el.querySelector('.entry-head').addEventListener('click',()=>{
+          openState[id]=!openState[id];
+          el.classList.toggle('open');
+          body.style.maxHeight=openState[id]?body.scrollHeight+'px':'0px';
+          if(openState[id]) setTimeout(fit,320);
+        });
+        el.querySelectorAll('[data-edit]').forEach(b=>{
+          b.addEventListener('click',e=>{
+            e.stopPropagation();
+            const target=g.list.find(x=>x.id===b.dataset.edit);
+            if(target) openEdit(target);
+          });
+        });
+        sec.appendChild(el);
+        return;
+      }
+
+      const item=g.single;
       const id=item.id;
       const el=document.createElement('div');
       el.className='entry'+(openState[id]?' open':'');
@@ -2221,6 +2339,7 @@ function swapStep(idx){
 
 function renderRoutine(parts,minutes){
   editingRoutineIdx=null;
+  sessionIdx=null;
   const {plan,caution}=buildPlan(parts,minutes);
   const out=document.getElementById('routineOut');
   if(!plan.length){out.innerHTML=`<div class="void-note">등록된 동작이 없어요</div>`;lastPlan=null;return;}
@@ -2235,7 +2354,12 @@ function paintPlan(){
   const out=document.getElementById('routineOut');
   let h='';
   if(caution)h+=`<div class="note warn">힙힌지(데드리프트) 동작이 포함돼 있어요. 허리 통증 이력이 있으니 가벼운 무게로 패턴 연습하듯 진행하고, 조금이라도 불편하면 바로 빼주세요.</div>`;
-  h+=`<div class="note">${label} · 약 ${estimateMinutes(plan)}분 · ${plan.length}개 동작<br>기구가 없으면 "다른 걸로", 빼려면 "빼기" 를 누르세요</div>`;
+  if(sessionIdx!==null && lastPlan.name){
+    h+=`<div class="session-bar"><span class="sb-name">${esc(lastPlan.name)}</span><span class="sb-tag">진행 중</span></div>`;
+  }else if(editingRoutineIdx!==null && lastPlan.name){
+    h+=`<div class="session-bar"><span class="sb-name">${esc(lastPlan.name)}</span><span class="sb-tag">편집 중</span></div>`;
+  }
+  h+=`<div class="note">${label||'내 루틴'} · 약 ${estimateMinutes(plan)}분 · ${plan.length}개 동작<br>무게·횟수를 넣고 "기록"을 누르면 도감에 반영돼요</div>`;
   const G2=goalObj();
   h+=`<div class="note" style="border-left-color:var(--ember)"><b style="font-weight:500">목표 · ${G2.label}</b><br>${G2.note}</div>`;
   const wparts=(typeof warnParts==='function')?warnParts():[];
@@ -2254,6 +2378,13 @@ function paintPlan(){
         <div class="step-role">${esc(it.role)}</div>
         <div class="step-sets">${reps}${it.record?' · 이전 '+esc(it.record):''}</div>
         <p class="step-cue">${esc(it.cue)}</p>
+        <div class="step-log">
+          <input type="number" inputmode="decimal" step="0.5" placeholder="kg" data-w="${i}" value="${it.logW||''}">
+          <span class="unit">kg ×</span>
+          <input type="number" inputmode="numeric" placeholder="회" data-rp="${i}" value="${it.logR||''}">
+          <span class="unit">회</span>
+          <button data-save="${i}" class="${it.logged?'saved':''}">${it.logged?'기록됨':'기록'}</button>
+        </div>
         <div class="e-actions">
           <button class="txt-btn" data-swap="${i}">↻ 다른 걸로</button>
           <button class="txt-btn danger" data-drop="${i}">빼기</button>
@@ -2268,10 +2399,35 @@ function paintPlan(){
       </div>`;
   h+=`<button class="add-line" id="addStepBtn" style="margin:18px 0 6px;">+ 동작 추가</button>`;
   h+=`<button class="save-routine-btn" id="doneRoutineBtn">✓ 오늘 이 루틴 완료</button>`;
-  h+=`<button class="save-routine-btn" id="saveRoutineBtn">이 루틴 저장하기</button>`;
+  h+=`<button class="save-routine-btn" id="saveRoutineBtn">${(editingRoutineIdx!==null||sessionIdx!==null)?'변경사항 저장 (덮어쓰기)':'이 루틴 저장하기'}</button>`;
   out.innerHTML=h;
   out.querySelectorAll('[data-swap]').forEach(b=>{
     b.addEventListener('click',()=>swapStep(parseInt(b.dataset.swap,10)));
+  });
+  out.querySelectorAll('[data-w],[data-rp]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const i=parseInt(inp.dataset.w!==undefined?inp.dataset.w:inp.dataset.rp,10);
+      if(inp.dataset.w!==undefined) lastPlan.plan[i].logW=inp.value;
+      else lastPlan.plan[i].logR=inp.value;
+      lastPlan.plan[i].logged=false;
+      const btn=out.querySelector(`[data-save="${i}"]`);
+      if(btn){ btn.classList.remove('saved'); btn.textContent='기록'; }
+    });
+  });
+  out.querySelectorAll('[data-save]').forEach(b=>{
+    b.addEventListener('click',async()=>{
+      const i=parseInt(b.dataset.save,10);
+      const it=lastPlan.plan[i];
+      if(!it.logW && !it.logR){ toast('무게나 횟수를 입력해주세요'); return; }
+      const ok=await logToAtlas(it.name, it.logW, it.logR);
+      if(ok){
+        it.logged=true; it.done=true;
+        b.classList.add('saved'); b.textContent='기록됨';
+        renderAtlas();
+        paintPlan();
+        toast('도감에 기록했어요');
+      }
+    });
   });
   out.querySelectorAll('[data-drop]').forEach(b=>{
     b.addEventListener('click',()=>{
@@ -2294,7 +2450,14 @@ function paintPlan(){
     const key=ymd(new Date());
     const rec=calData[key]||{acts:[],memo:''};
     if(!rec.acts.includes('gym')) rec.acts.push('gym');
-    const line=`${label} ${minutes}분 — ${plan.map(p=>p.name).join(', ')}`;
+    const title=(lastPlan.name||label||'운동');
+    const detail=plan.map(p=>{
+      const w=p.logW?`${p.logW}kg`:'';
+      const r=p.logR?`${p.logR}회`:'';
+      const extra=[w,r].filter(Boolean).join(' × ');
+      return p.name+(extra?` ${extra}`:'');
+    }).join('\n');
+    const line=`${title} (${estimateMinutes(plan)}분)\n${detail}`;
     rec.memo=rec.memo?rec.memo+'\n'+line:line;
     calData[key]=rec;
     await saveCal();
@@ -2302,7 +2465,9 @@ function paintPlan(){
     toast('오늘 캘린더에 기록했어요');
   });
   document.getElementById('saveRoutineBtn').addEventListener('click',()=>{
-    document.getElementById('srName').value=`${label} ${minutes}분`;
+    if(sessionIdx!==null && editingRoutineIdx===null) editingRoutineIdx=sessionIdx;
+    const existing=(editingRoutineIdx!==null)?savedRoutines[editingRoutineIdx]:null;
+    document.getElementById('srName').value = existing? existing.name : (lastPlan.name || `${label||'내 루틴'} ${estimateMinutes(plan)}분`);
     document.getElementById('ovSaveRoutine').classList.add('show');
   });
 }
@@ -2616,31 +2781,40 @@ document.getElementById('srSave').addEventListener('click',async()=>{
 
   // 불러온 루틴을 수정해 저장하는 경우 → 덮어쓰기
   if(editingRoutineIdx!==null){
+    const prev=savedRoutines[editingRoutineIdx]||{};
     savedRoutines[editingRoutineIdx]={
       name:nm,
-      parts:lastPlan.parts,
-      minutes:lastPlan.minutes,
-      caution:lastPlan.caution,
+      parts:lastPlan.parts||prev.parts||[],
+      minutes:estimateMinutes(lastPlan.plan),
+      caution:!!lastPlan.caution,
+      custom:prev.custom||lastPlan.custom||false,
+      memo:prev.memo||lastPlan.memo||'',
       plan:lastPlan.plan.map(p=>({name:p.name,role:p.role,cue:p.cue,record:p.record||''})),
       date:new Date().toISOString().slice(0,10)
     };
     await saveRoutines();
-    editingRoutineIdx=null;
+    lastPlan.name=nm;
     ovSR.classList.remove('show');
-    toast('덮어썼어요');
+    try{ renderSaved(); }catch(e){}
+    paintPlan();
+    toast('저장했어요 (덮어쓰기)');
     return;
   }
 
   savedRoutines.push({
     name:nm,
     parts:lastPlan.parts,
-    minutes:lastPlan.minutes,
-    caution:lastPlan.caution,
+    minutes:estimateMinutes(lastPlan.plan),
+    caution:!!lastPlan.caution,
     plan:lastPlan.plan.map(p=>({name:p.name,role:p.role,cue:p.cue,record:p.record||''})),
     date:new Date().toISOString().slice(0,10)
   });
   await saveRoutines();
+  lastPlan.name=nm;
+  editingRoutineIdx=savedRoutines.length-1;
   ovSR.classList.remove('show');
+  try{ renderSaved(); }catch(e){}
+  paintPlan();
   toast('루틴 저장됨');
 });
 
@@ -2653,6 +2827,7 @@ function renderSaved(){
         <div class="saved-name">${esc(r.name)}</div>
         <div class="saved-meta">${r.custom?'직접 만든 루틴':esc((r.parts||[]).map(k=>(PARTS.find(p=>p.key===k)||{}).label).filter(Boolean).join(' + '))} · 약 ${r.minutes||estimateMinutes(r.plan)}분 · ${r.plan.length}개 · ${r.date}</div>
       </div>
+      <button class="txt-btn" data-run="${i}" style="color:var(--ember)">운동하기</button>
       <button class="txt-btn" data-open="${i}">열기</button>
       <button class="txt-btn" data-share="${i}">공유</button>
       <button class="txt-btn" data-rename="${i}">이름</button>
@@ -2682,14 +2857,20 @@ function renderSaved(){
       const idx=parseInt(lb.dataset.load,10);
       const src=savedRoutines[idx];
       lastPlan={parts:src.parts||[],minutes:src.minutes,caution:src.caution,
-        plan:src.plan.map(x=>({...x}))};
+        plan:src.plan.map(x=>({...x,done:false})), name:src.name, custom:src.custom, memo:src.memo};
       editingRoutineIdx=idx;
+      sessionIdx=null;
       document.querySelector('.sub-tab[data-sub="new"]').click();
       paintPlan();
       toast('불러왔어요 · 수정 후 저장하면 덮어써져요');
     });
     document.getElementById('savedDetail').scrollIntoView({behavior:'smooth',block:'start'});
   }));
+  el.querySelectorAll('[data-run]').forEach(b=>b.addEventListener('click',()=>{
+    const idx=parseInt(b.dataset.run,10);
+    startSession(idx);
+  }));
+
   el.querySelectorAll('[data-share]').forEach(b=>b.addEventListener('click',()=>{
     openShareOut(savedRoutines[parseInt(b.dataset.share,10)]);
   }));
@@ -3184,14 +3365,19 @@ function renderStreak(){
 const ovBuild=document.getElementById('ovBuild');
 let buildPicked=[];
 
-function openBuilder(){
-  buildPicked=[];
-  document.getElementById('buildName').value='';
-  document.getElementById('buildMemo').value='';
+function paintBuilderCount(){
+  const est=estimateMinutes(buildPicked.map(p=>({role:p.role})));
+  document.getElementById('builderCount').textContent=
+    buildPicked.length?`${buildPicked.length}개 선택됨 · 약 ${est}분`:'0개 선택됨';
+}
+
+function renderBuilderList(term){
+  const t=(term||'').trim().toLowerCase();
   const wrap=document.getElementById('builderList');
   let h='';
   CATS.forEach(c=>{
-    const items=itemsFor(c.key);
+    let items=itemsFor(c.key);
+    if(t) items=items.filter(i=>i.name.toLowerCase().includes(t)||(i.cue||'').toLowerCase().includes(t));
     if(!items.length)return;
     h+=`<div class="builder-cat">${c.label}</div>`;
     items.forEach(it=>{
@@ -3202,7 +3388,7 @@ function openBuilder(){
           </div>`;
     });
   });
-  wrap.innerHTML=h||'<div class="void-note">도감에 동작이 없어요</div>';
+  wrap.innerHTML=h||`<div class="void-note">${t?'검색 결과 없음':'도감에 동작이 없어요'}</div>`;
 
   const paint=()=>{
     wrap.querySelectorAll('.builder-item').forEach(el=>{
@@ -3210,9 +3396,7 @@ function openBuilder(){
       el.classList.toggle('on',i>=0);
       el.querySelector('.builder-order').textContent = i>=0 ? (i+1) : '';
     });
-    const est=estimateMinutes(buildPicked.map(p=>({role:p.role})));
-    document.getElementById('builderCount').textContent=
-      buildPicked.length?`${buildPicked.length}개 선택됨 · 약 ${est}분`:'0개 선택됨';
+    paintBuilderCount();
   };
 
   wrap.querySelectorAll('.builder-item').forEach(el=>{
@@ -3225,8 +3409,17 @@ function openBuilder(){
     });
   });
   paint();
+}
+
+function openBuilder(){
+  buildPicked=[];
+  document.getElementById('buildName').value='';
+  document.getElementById('buildMemo').value='';
+  document.getElementById('buildSearch').value='';
+  renderBuilderList('');
   ovBuild.classList.add('show');
 }
+document.getElementById('buildSearch').addEventListener('input',e=>renderBuilderList(e.target.value));
 
 ovBuild.addEventListener('click',e=>{if(e.target===ovBuild)ovBuild.classList.remove('show');});
 document.getElementById('buildCancel').addEventListener('click',()=>ovBuild.classList.remove('show'));
@@ -3307,7 +3500,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'09', d:'2026-07-24', body:'루틴 공유 — 복사 대신 공유창으로 바로 보내도록 변경 (코드 잘림 방지)\n인앱 브라우저에서도 복사되도록 대체 방식 추가\n코드가 잘렸을 때 글자 수를 함께 표시'}
+  {v:'12', d:'2026-07-24', body:'저장한 루틴에 “운동하기” 버튼 추가 — 바로 세션 시작\n편집·세션 후 저장하면 새로 만들지 않고 덮어쓰도록 수정\n루틴 진행 중 무게·횟수를 입력하면 도감 기록과 중량 그래프에 바로 반영\n루틴 완료 시 캘린더에 동작별 무게까지 함께 기록'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
@@ -3350,6 +3543,97 @@ document.getElementById('setVersion').addEventListener('click',()=>{
 });
 ovVersion.addEventListener('click',e=>{if(e.target===ovVersion)ovVersion.classList.remove('show');});
 document.getElementById('verClose').addEventListener('click',()=>ovVersion.classList.remove('show'));
+
+
+/* ===== 같은 계열 동작 묶기 ===== */
+const FAMILIES=[
+  {key:'시티드로우',   match:/시티드로우|하이로우/},
+  {key:'렛풀다운',     match:/렛풀다운/},
+  {key:'로우 (바벨·머신)', match:/티바로우|바벨로우|인버티드로우/},
+  {key:'데드리프트',   match:/데드리프트/},
+  {key:'스쿼트',       match:/스쿼트$|스쿼트 ·|스쿼트\b/},
+  {key:'힙쓰러스트',   match:/힙쓰러스트/},
+  {key:'레그컬',       match:/레그컬/},
+  {key:'레그레이즈',   match:/레그레이즈/},
+  {key:'플랭크',       match:/플랭크/},
+  {key:'프레스 (가슴)', match:/체스트 프레스|인클라인 프레스|벤치프레스/},
+  {key:'숄더프레스',   match:/숄더프레스/}
+];
+function familyOf(name){
+  for(const f of FAMILIES){ if(f.match.test(name)) return f.key; }
+  return null;
+}
+// 카테고리 안에서 계열별로 묶되, 하나뿐이면 그대로 낱개로
+function groupItems(items){
+  const out=[], byFam={};
+  items.forEach(it=>{
+    const f=familyOf(it.name);
+    if(!f){ out.push({single:it}); return; }
+    if(!byFam[f]){ byFam[f]={fam:f,list:[],pos:out.length}; out.push(byFam[f]); }
+    byFam[f].list.push(it);
+  });
+  return out.map(g=>{
+    if(g.single) return g;
+    if(g.list.length===1) return {single:g.list[0]};
+    return g;
+  });
+}
+
+
+/* ===== 저장한 루틴으로 운동 시작 ===== */
+let sessionIdx=null;
+
+function startSession(idx){
+  const src=savedRoutines[idx];
+  if(!src)return;
+  lastPlan={
+    parts:src.parts||[],
+    minutes:src.minutes||estimateMinutes(src.plan),
+    caution:!!src.caution,
+    plan:src.plan.map(x=>({...x,done:false})),
+    name:src.name, custom:src.custom, memo:src.memo
+  };
+  sessionIdx=idx;
+  editingRoutineIdx=null;
+  document.querySelector('.sub-tab[data-sub="new"]').click();
+  paintPlan();
+  window.scrollTo({top:0,behavior:'smooth'});
+  toast('시작해요 · ' + src.name);
+}
+
+/* 동작 기록을 도감에 반영 */
+async function logToAtlas(name, weight, reps){
+  const target=allItems().find(x=>x.name===name);
+  if(!target){ toast('도감에 없는 동작이에요'); return false; }
+  const id=target.id;
+
+  // 표시용 기록 문구 갱신
+  const label = weight ? (reps? `${weight}kg × ${reps}회` : `${weight}kg`) : (reps? `${reps}회` : '');
+  if(label){
+    if(id.startsWith('u:')){
+      const t=userAdded.find(i=>'u:'+i.uid===id);
+      if(t) t.record=label;
+      await saveEx();
+    }else{
+      overrides[id]=Object.assign({},overrides[id]||{},{
+        cat:target.cat,name:target.name,cue:target.cue,record:label
+      });
+      await saveOverrides();
+    }
+  }
+
+  // 중량 추이에 점 추가
+  const w=parseFloat(weight);
+  if(isFinite(w)&&w>0){
+    if(!weights[id]) weights[id]=[];
+    const today=new Date().toISOString().slice(5,10);
+    const last=weights[id][weights[id].length-1];
+    if(last&&last.d===today) last.w=w;
+    else weights[id].push({d:today,w});
+    await saveWeights();
+  }
+  return true;
+}
 
 /* ---- init ---- */
 renderPickers();
