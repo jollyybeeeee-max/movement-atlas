@@ -1099,11 +1099,11 @@
     color:var(--ember);
   }
   .step-log{
-    display:flex;gap:8px;align-items:center;
-    margin-top:10px;
+    display:flex;gap:6px;align-items:center;
+    margin-top:10px;flex-wrap:wrap;
   }
   .step-log input{
-    width:70px;padding:7px 0;
+    width:52px;padding:7px 0;
     background:transparent;border:none;border-bottom:1px solid var(--hair-strong);
     color:var(--bone);font-family:'IBM Plex Mono',monospace;
     border-radius:0;text-align:center;
@@ -2380,9 +2380,11 @@ function paintPlan(){
         <p class="step-cue">${esc(it.cue)}</p>
         <div class="step-log">
           <input type="number" inputmode="decimal" step="0.5" placeholder="kg" data-w="${i}" value="${it.logW||''}">
-          <span class="unit">kg ×</span>
+          <span class="unit">kg</span>
           <input type="number" inputmode="numeric" placeholder="회" data-rp="${i}" value="${it.logR||''}">
-          <span class="unit">회</span>
+          <span class="unit">회 ×</span>
+          <input type="number" inputmode="numeric" placeholder="세트" data-st="${i}" value="${it.logS||''}">
+          <span class="unit">세트</span>
           <button data-save="${i}" class="${it.logged?'saved':''}">${it.logged?'기록됨':'기록'}</button>
         </div>
         <div class="e-actions">
@@ -2404,11 +2406,13 @@ function paintPlan(){
   out.querySelectorAll('[data-swap]').forEach(b=>{
     b.addEventListener('click',()=>swapStep(parseInt(b.dataset.swap,10)));
   });
-  out.querySelectorAll('[data-w],[data-rp]').forEach(inp=>{
+  out.querySelectorAll('[data-w],[data-rp],[data-st]').forEach(inp=>{
     inp.addEventListener('input',()=>{
-      const i=parseInt(inp.dataset.w!==undefined?inp.dataset.w:inp.dataset.rp,10);
-      if(inp.dataset.w!==undefined) lastPlan.plan[i].logW=inp.value;
-      else lastPlan.plan[i].logR=inp.value;
+      const d=inp.dataset;
+      const i=parseInt(d.w!==undefined?d.w:(d.rp!==undefined?d.rp:d.st),10);
+      if(d.w!==undefined) lastPlan.plan[i].logW=inp.value;
+      else if(d.rp!==undefined) lastPlan.plan[i].logR=inp.value;
+      else lastPlan.plan[i].logS=inp.value;
       lastPlan.plan[i].logged=false;
       const btn=out.querySelector(`[data-save="${i}"]`);
       if(btn){ btn.classList.remove('saved'); btn.textContent='기록'; }
@@ -2418,8 +2422,8 @@ function paintPlan(){
     b.addEventListener('click',async()=>{
       const i=parseInt(b.dataset.save,10);
       const it=lastPlan.plan[i];
-      if(!it.logW && !it.logR){ toast('무게나 횟수를 입력해주세요'); return; }
-      const ok=await logToAtlas(it.name, it.logW, it.logR);
+      if(!it.logW && !it.logR && !it.logS){ toast('무게·횟수·세트 중 하나는 입력해주세요'); return; }
+      const ok=await logToAtlas(it.name, it.logW, it.logR, it.logS);
       if(ok){
         it.logged=true; it.done=true;
         b.classList.add('saved'); b.textContent='기록됨';
@@ -2452,9 +2456,11 @@ function paintPlan(){
     if(!rec.acts.includes('gym')) rec.acts.push('gym');
     const title=(lastPlan.name||label||'운동');
     const detail=plan.map(p=>{
-      const w=p.logW?`${p.logW}kg`:'';
-      const r=p.logR?`${p.logR}회`:'';
-      const extra=[w,r].filter(Boolean).join(' × ');
+      const bits=[];
+      if(p.logW) bits.push(`${p.logW}kg`);
+      if(p.logR) bits.push(`${p.logR}회`);
+      let extra=bits.join(' ');
+      if(p.logS) extra=(extra?extra+' × ':'')+`${p.logS}세트`;
       return p.name+(extra?` ${extra}`:'');
     }).join('\n');
     const line=`${title} (${estimateMinutes(plan)}분)\n${detail}`;
@@ -3500,7 +3506,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'12', d:'2026-07-24', body:'저장한 루틴에 “운동하기” 버튼 추가 — 바로 세션 시작\n편집·세션 후 저장하면 새로 만들지 않고 덮어쓰도록 수정\n루틴 진행 중 무게·횟수를 입력하면 도감 기록과 중량 그래프에 바로 반영\n루틴 완료 시 캘린더에 동작별 무게까지 함께 기록'}
+  {v:'13', d:'2026-07-24', body:'루틴 기록에 세트 수 추가 — 무게 × 횟수 × 세트를 함께 저장\n도감 기록과 캘린더 메모에도 세트까지 반영'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
@@ -3602,13 +3608,16 @@ function startSession(idx){
 }
 
 /* 동작 기록을 도감에 반영 */
-async function logToAtlas(name, weight, reps){
+async function logToAtlas(name, weight, reps, sets){
   const target=allItems().find(x=>x.name===name);
   if(!target){ toast('도감에 없는 동작이에요'); return false; }
   const id=target.id;
 
   // 표시용 기록 문구 갱신
-  const label = weight ? (reps? `${weight}kg × ${reps}회` : `${weight}kg`) : (reps? `${reps}회` : '');
+  const parts=[];
+  if(weight) parts.push(`${weight}kg`);
+  if(reps)   parts.push(`${reps}회`);
+  const label = (parts.join(' ') + (sets? ` × ${sets}세트` : '')).trim();
   if(label){
     if(id.startsWith('u:')){
       const t=userAdded.find(i=>'u:'+i.uid===id);
