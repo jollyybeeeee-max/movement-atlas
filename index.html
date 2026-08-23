@@ -1132,6 +1132,21 @@
     vertical-align:1px;
   }
   .do-count.hot{ color:var(--ember); }
+
+  .last-rec{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--ember);
+    margin:4px 0 9px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .last-rec .trend{
+    color:var(--bone-faint);
+    font-size:9.5px;
+  }
 </style>
 </head>
 <body>
@@ -1317,7 +1332,10 @@
     <div class="fld"><label>이름</label><input type="text" id="srName" placeholder="예: 하체 30분 기본"></div>
     <div class="acts">
       <button class="btn btn-g" id="srCancel">Cancel</button>
-      <button class="btn btn-p" id="srSave">Save</button>
+      <button class="btn btn-p" id="srSave">저장</button>
+    </div>
+    <div style="text-align:center;margin-top:20px;" id="srCopyWrap">
+      <button class="txt-btn" id="srSaveAs" style="color:var(--ember)">다른 이름으로 새로 저장</button>
     </div>
   </div>
 </div>
@@ -2390,12 +2408,25 @@ function paintPlan(){
     const G=goalObj();
     const reps=/코어|웜업/.test(it.role)?G.reps.core
       :/복합|스쿼트|힌지|당기기|밀기/.test(it.role)?G.reps.compound:G.reps.iso;
+    // 도감에서 지난 기록 가져오기
+    const atlasHit=allItems().find(x=>x.name===it.name);
+    const lastRec=(atlasHit&&atlasHit.record)||it.record||'';
+    const hist=(atlasHit&&atlasHit.hist)||[];
+    const prevW=hist.length?hist[hist.length-1]:null;
+    const beforeW=hist.length>1?hist[hist.length-2]:null;
+    let trend='';
+    if(prevW&&beforeW){
+      const d=prevW.w-beforeW.w;
+      if(d>0) trend=` ▲${d}`;
+      else if(d<0) trend=` ▼${Math.abs(d)}`;
+    }
     h+=`<div class="step${it.done?' done':''}">
       <button class="step-check" data-check="${i}" aria-label="완료">✓</button>
       <div class="step-b">
         <p class="step-name">${esc(it.name)}</p>
         <div class="step-role">${esc(it.role)}</div>
-        <div class="step-sets">${reps}${it.record?' · 이전 '+esc(it.record):''}</div>
+        <div class="step-sets">${reps}</div>
+        ${lastRec?`<div class="last-rec">지난 기록 · ${esc(lastRec)}${prevW?`<span class="trend">${prevW.d} ${prevW.w}kg${trend}</span>`:''}</div>`:''}
         <p class="step-cue">${esc(it.cue)}</p>
         <div class="step-log">
           <input type="number" inputmode="decimal" step="0.5" placeholder="kg" data-w="${i}" value="${it.logW||''}">
@@ -2509,6 +2540,7 @@ function paintPlan(){
     if(sessionIdx!==null && editingRoutineIdx===null) editingRoutineIdx=sessionIdx;
     const existing=(editingRoutineIdx!==null)?savedRoutines[editingRoutineIdx]:null;
     document.getElementById('srName').value = existing? existing.name : (lastPlan.name || `${label||'내 루틴'} ${estimateMinutes(plan)}분`);
+    document.getElementById('srCopyWrap').style.display=(editingRoutineIdx!==null)?'block':'none';
     document.getElementById('ovSaveRoutine').classList.add('show');
   });
 }
@@ -2803,6 +2835,31 @@ document.querySelectorAll('.sub-tab').forEach(t=>{
 const ovSR=document.getElementById('ovSaveRoutine');
 ovSR.addEventListener('click',e=>{if(e.target===ovSR)ovSR.classList.remove('show');});
 document.getElementById('srCancel').addEventListener('click',()=>{renamingIdx=null;ovSR.classList.remove('show');});
+document.getElementById('srSaveAs').addEventListener('click',async()=>{
+  const nm=document.getElementById('srName').value.trim();
+  if(!nm){toast('이름을 입력해주세요');return;}
+  if(!lastPlan){toast('저장할 루틴이 없어요');return;}
+  const dup=savedRoutines.some(r=>r.name===nm);
+  savedRoutines.push({
+    name: dup? nm+' (사본)' : nm,
+    parts:lastPlan.parts||[],
+    minutes:estimateMinutes(lastPlan.plan),
+    caution:!!lastPlan.caution,
+    custom:lastPlan.custom||false,
+    memo:lastPlan.memo||'',
+    plan:lastPlan.plan.map(p=>({name:p.name,role:p.role,cue:p.cue,record:p.record||''})),
+    date:new Date().toISOString().slice(0,10)
+  });
+  await saveRoutines();
+  editingRoutineIdx=savedRoutines.length-1;
+  sessionIdx=null;
+  lastPlan.name=savedRoutines[editingRoutineIdx].name;
+  renamingIdx=null;
+  ovSR.classList.remove('show');
+  try{ renderSaved(); }catch(e){}
+  paintPlan();
+  toast('새 루틴으로 저장했어요');
+});
 document.getElementById('srSave').addEventListener('click',async()=>{
   const nm=document.getElementById('srName').value.trim();
   if(!nm){toast('이름을 입력해주세요');return;}
@@ -2862,7 +2919,8 @@ document.getElementById('srSave').addEventListener('click',async()=>{
 function renderSaved(){
   const el=document.getElementById('savedList');
   if(!savedRoutines.length){el.innerHTML='<div class="void-note">저장한 루틴 없음</div>';return;}
-  el.innerHTML=savedRoutines.map((r,i)=>`
+  const order=savedRoutines.map((r,i)=>({r,i})).reverse();   // 최근 저장이 위로
+  el.innerHTML=order.map(({r,i})=>`
     <div class="saved-row">
       <div style="flex:1">
         <div class="saved-name">${esc(r.name)}</div>
@@ -3541,7 +3599,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'14', d:'2026-07-24', body:'도감에 동작별 수행 횟수 표시 — 루틴 완료할 때마다 자동 누적\n계열로 묶인 항목은 합계도 함께 표시\n루틴 완료 후 처음 화면으로 돌아오도록 변경'}
+  {v:'15', d:'2026-07-24', body:'루틴 진행 중 각 동작에 지난 기록과 중량 변화(▲▼) 표시\n저장한 루틴을 최근 순으로 정렬\n루틴을 다른 이름으로 새로 저장하는 기능 추가'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
