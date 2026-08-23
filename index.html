@@ -288,8 +288,9 @@
     font-size:8px;
     letter-spacing:0.14em;
     padding:2px 5px;
-    border:1px solid var(--ember);
-    color:var(--ember);
+    border:1px solid var(--c-pull);
+    color:var(--c-pull);
+    background:rgba(78,145,137,0.12);
     margin-left:8px;
     vertical-align:2px;
   }
@@ -1147,6 +1148,18 @@
     color:var(--bone-faint);
     font-size:9.5px;
   }
+
+  .log-found{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--bone-faint);
+    padding:4px 0 12px;
+  }
+  .log-body mark{
+    background:rgba(201,102,59,0.28);
+    color:var(--bone);
+    padding:1px 2px;
+  }
 </style>
 </head>
 <body>
@@ -1176,6 +1189,7 @@
 </section>
 
 <section id="view-log" style="display:none;">
+  <div class="search-wrap"><input type="text" id="logSearch" placeholder="일지 검색 · 동작 이름이나 내용"></div>
   <div class="wrap">
     <p class="tab-hint">오늘 운동에 대해 자유롭게 기록해보세요.<br>PT 피드백을 붙여넣어도 좋아요.<br>새로 나온 동작은 도감에 추가해드려요.</p>
   </div>
@@ -2024,28 +2038,40 @@ document.getElementById('nav').querySelectorAll('.nav-item').forEach(t=>{
 
 /* ---- logs ---- */
 let editingLogIdx=null;
+let logSearchTerm='';
 
 function renderLogs(){
   const w=document.getElementById('logWrap');
+  const term=(logSearchTerm||'').trim().toLowerCase();
   let h=`<button class="add-line" id="addLog">+ 오늘 일지 쓰기</button>`;
+
+  let list=sessionLogs.map((e,i)=>({e,i}));
+  if(term) list=list.filter(({e})=>e.text.toLowerCase().includes(term)||e.date.includes(term));
+  list.sort((a,b)=>b.e.date.localeCompare(a.e.date));
+
   if(sessionLogs.length===0){
     h+=`<div class="void-note">아직 기록이 없어요</div>`;
+  }else if(!list.length){
+    h+=`<div class="void-note">"${esc(logSearchTerm)}" 검색 결과 없음</div>`;
   }else{
-    sessionLogs
-      .map((e,i)=>({e,i}))
-      .sort((a,b)=>b.e.date.localeCompare(a.e.date))
-      .forEach(({e,i})=>{
-        const d=e.date.split('-');
-        h+=`<div class="log-item">
-          <div class="log-date">${d[0]}<b>${d[1]}.${d[2]}</b></div>
-          <div class="log-body">${esc(e.text)}
-            <div class="e-actions">
-              <button class="txt-btn" data-logedit="${i}">수정</button>
-              <button class="txt-btn danger" data-logdel="${i}">삭제</button>
-            </div>
+    if(term) h+=`<div class="log-found">${list.length}건 찾음</div>`;
+    list.forEach(({e,i})=>{
+      const d=e.date.split('-');
+      let body=esc(e.text);
+      if(term){
+        const re=new RegExp('('+term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        body=body.replace(re,'<mark>$1</mark>');
+      }
+      h+=`<div class="log-item">
+        <div class="log-date">${d[0]}<b>${d[1]}.${d[2]}</b></div>
+        <div class="log-body">${body}
+          <div class="e-actions">
+            <button class="txt-btn" data-logedit="${i}">수정</button>
+            <button class="txt-btn danger" data-logdel="${i}">삭제</button>
           </div>
-        </div>`;
-      });
+        </div>
+      </div>`;
+    });
   }
   w.innerHTML=h;
 
@@ -2540,7 +2566,7 @@ function paintPlan(){
     if(sessionIdx!==null && editingRoutineIdx===null) editingRoutineIdx=sessionIdx;
     const existing=(editingRoutineIdx!==null)?savedRoutines[editingRoutineIdx]:null;
     document.getElementById('srName').value = existing? existing.name : (lastPlan.name || `${label||'내 루틴'} ${estimateMinutes(plan)}분`);
-    document.getElementById('srCopyWrap').style.display=(editingRoutineIdx!==null)?'block':'none';
+    document.getElementById('srCopyWrap').style.display='block';
     document.getElementById('ovSaveRoutine').classList.add('show');
   });
 }
@@ -2977,6 +3003,7 @@ function renderSaved(){
   el.querySelectorAll('[data-rename]').forEach(b=>b.addEventListener('click',()=>{
     renamingIdx=parseInt(b.dataset.rename,10);
     document.getElementById('srName').value=savedRoutines[renamingIdx].name;
+    document.getElementById('srCopyWrap').style.display='none';
     document.getElementById('ovSaveRoutine').classList.add('show');
   }));
 
@@ -3599,7 +3626,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'15', d:'2026-07-24', body:'루틴 진행 중 각 동작에 지난 기록과 중량 변화(▲▼) 표시\n저장한 루틴을 최근 순으로 정렬\n루틴을 다른 이름으로 새로 저장하는 기능 추가'}
+  {v:'16', d:'2026-07-24', body:'다른 이름으로 저장 버튼이 보이지 않던 문제 수정\n내가 추가한 동작 표시(MINE)를 청록색으로 변경 — 계열 표시와 구분\n운동 일지에 검색 추가 (동작 이름·내용·날짜, 검색어 강조)'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
