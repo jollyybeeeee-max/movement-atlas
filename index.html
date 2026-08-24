@@ -291,9 +291,9 @@
     font-size:8px;
     letter-spacing:0.14em;
     padding:2px 5px;
-    border:1px solid rgba(148,173,121,0.4);
-    color:#94AD79;
-    background:rgba(148,173,121,0.08);
+    border:1px solid rgba(224,160,119,0.3);
+    color:var(--ember-lt);
+    background:rgba(224,160,119,0.07);
     margin-left:8px;
     vertical-align:2px;
   }
@@ -447,7 +447,7 @@
   }
   .step-sets{
     font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:#94AD79;margin-bottom:9px;letter-spacing:0.02em;
+    color:var(--ember-lt);margin-bottom:9px;letter-spacing:0.02em;
   }
   .step-cue{font-size:12.5px;line-height:1.72;color:rgba(240,236,228,0.78);margin:0;font-weight:300;}
 
@@ -1069,8 +1069,8 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:9px;
     letter-spacing:0.1em;
-    color:#7C9BC0;
-    border:1px solid rgba(124,155,192,0.4);
+    color:var(--ember);
+    border:1px solid rgba(201,102,59,0.4);
     padding:1px 5px;
     margin-left:7px;
     vertical-align:2px;
@@ -3667,7 +3667,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'19', d:'2026-07-24', body:'색 구분을 뚜렷하게 변경 — 카테고리는 블루, 세트는 그린, 지난 기록은 골드\n도감도 계열은 블루, 횟수는 골드, MINE은 그린으로 구분\n검색창 문구를 검색으로 단순화'}
+  {v:'20', d:'2026-07-24', body:'도감 계열 표시를 앰버로, MINE을 연한 앰버로 변경\n루틴 세트·횟수를 연한 앰버로 변경 — 전체적으로 차분하게 정리'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
