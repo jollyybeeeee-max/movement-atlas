@@ -24,6 +24,9 @@
     --bone-dim:#9A968E;
     --bone-faint:#615E59;
     --ember:#C9663B;
+    --ember-lt:#E0A077;
+    --ember-md:#B57A55;
+    --ember-dp:#8F5C42;
     --c-core:#7C8FA8;
     --c-glute:#C9663B;
     --c-squat:#8A9B6E;
@@ -288,9 +291,9 @@
     font-size:8px;
     letter-spacing:0.14em;
     padding:2px 5px;
-    border:1px solid var(--c-pull);
-    color:var(--c-pull);
-    background:rgba(78,145,137,0.12);
+    border:1px solid rgba(224,160,119,0.28);
+    color:rgba(224,160,119,0.6);
+    background:rgba(224,160,119,0.06);
     margin-left:8px;
     vertical-align:2px;
   }
@@ -440,11 +443,11 @@
   .step-name{font-family:'Fraunces',serif;font-weight:500;font-size:16px;margin:0 0 5px;}
   .step-role{
     font-family:'IBM Plex Mono',monospace;font-size:9.5px;
-    letter-spacing:0.1em;text-transform:uppercase;color:var(--ember);margin-bottom:9px;
+    letter-spacing:0.1em;text-transform:uppercase;color:var(--ember-dp);margin-bottom:9px;
   }
   .step-sets{
     font-family:'IBM Plex Mono',monospace;font-size:10.5px;
-    color:var(--bone-faint);margin-bottom:9px;letter-spacing:0.02em;
+    color:var(--ember-md);margin-bottom:9px;letter-spacing:0.02em;
   }
   .step-cue{font-size:12.5px;line-height:1.72;color:rgba(240,236,228,0.78);margin:0;font-weight:300;}
 
@@ -605,9 +608,9 @@
   }
   .save-routine-btn{
     width:100%;padding:15px;margin:22px 0 6px;
-    border:1px solid var(--hair-strong);background:transparent;
+    border:1px solid var(--ember-md);background:transparent;
     font-family:'IBM Plex Mono',monospace;font-size:10px;
-    letter-spacing:0.16em;text-transform:uppercase;color:var(--bone-dim);cursor:pointer;
+    letter-spacing:0.16em;text-transform:uppercase;color:var(--ember-md);cursor:pointer;
   }
   .sub-tabs{display:flex;gap:0;border-bottom:1px solid var(--hair);margin-top:26px;}
   .sub-tab{
@@ -750,7 +753,7 @@
   .tab-hint{
     font-size:12px;
     line-height:1.7;
-    color:var(--bone-faint);
+    color:rgba(154,150,142,0.72);
     font-weight:300;
     margin:0;
     padding:16px 22px 0;
@@ -865,7 +868,7 @@
     font-weight:500;
     font-size:15px;
     line-height:1;
-    color:var(--bone);
+    color:var(--ember-lt);
   }
   .streak-num.hot{ color:var(--ember); }
   .streak-lb{
@@ -1066,8 +1069,8 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:9px;
     letter-spacing:0.1em;
-    color:var(--ember);
-    border:1px solid var(--ember);
+    color:var(--ember-md);
+    border:1px solid rgba(181,122,85,0.4);
     padding:1px 5px;
     margin-left:7px;
     vertical-align:2px;
@@ -1128,7 +1131,7 @@
     font-family:'IBM Plex Mono',monospace;
     font-size:9px;
     letter-spacing:0.08em;
-    color:var(--bone-faint);
+    color:var(--ember-lt);
     margin-left:7px;
     vertical-align:1px;
   }
@@ -1137,7 +1140,7 @@
   .last-rec{
     font-family:'IBM Plex Mono',monospace;
     font-size:10.5px;
-    color:var(--ember);
+    color:var(--ember-lt);
     margin:4px 0 9px;
     display:flex;
     align-items:baseline;
@@ -1152,13 +1155,34 @@
   .log-found{
     font-family:'IBM Plex Mono',monospace;
     font-size:10px;
-    color:var(--bone-faint);
+    color:var(--ember-md);
     padding:4px 0 12px;
   }
   .log-body mark{
     background:rgba(201,102,59,0.28);
     color:var(--bone);
     padding:1px 2px;
+  }
+
+  .save-row{
+    display:flex;
+    gap:10px;
+    margin:18px 0 6px;
+  }
+  .save-row .save-routine-btn{
+    margin:0;
+    flex:1;
+    line-height:1.5;
+    padding:13px 8px;
+  }
+  .save-row .sub{
+    font-size:8.5px;
+    opacity:0.65;
+    letter-spacing:0.1em;
+  }
+  .save-routine-btn.alt{
+    border-color:var(--hair-strong);
+    color:var(--bone-dim);
   }
 </style>
 </head>
@@ -1342,15 +1366,13 @@
 
 <div class="ov" id="ovSaveRoutine">
   <div class="sheet">
-    <h3>루틴 저장</h3>
+    <h3 id="srTitle">루틴 저장</h3>
     <div class="fld"><label>이름</label><input type="text" id="srName" placeholder="예: 하체 30분 기본"></div>
     <div class="acts">
       <button class="btn btn-g" id="srCancel">Cancel</button>
       <button class="btn btn-p" id="srSave">저장</button>
     </div>
-    <div style="text-align:center;margin-top:20px;" id="srCopyWrap">
-      <button class="txt-btn" id="srSaveAs" style="color:var(--ember)">다른 이름으로 새로 저장</button>
-    </div>
+    <div style="display:none;" id="srCopyWrap"><button class="txt-btn" id="srSaveAs"></button></div>
   </div>
 </div>
 
@@ -2477,7 +2499,11 @@ function paintPlan(){
       </div>`;
   h+=`<button class="add-line" id="addStepBtn" style="margin:18px 0 6px;">+ 동작 추가</button>`;
   h+=`<button class="save-routine-btn" id="doneRoutineBtn">✓ 오늘 이 루틴 완료</button>`;
-  h+=`<button class="save-routine-btn" id="saveRoutineBtn">${(editingRoutineIdx!==null||sessionIdx!==null)?'변경사항 저장 (덮어쓰기)':'이 루틴 저장하기'}</button>`;
+  const isEdit=(editingRoutineIdx!==null||sessionIdx!==null);
+  h+=`<div class="save-row">
+        <button class="save-routine-btn" id="saveRoutineBtn">${isEdit?'변경사항 저장<br><span class="sub">덮어쓰기</span>':'이 루틴 저장하기'}</button>
+        <button class="save-routine-btn alt" id="saveAsBtn">다른 이름으로<br><span class="sub">새로 저장</span></button>
+      </div>`;
   out.innerHTML=h;
   out.querySelectorAll('[data-swap]').forEach(b=>{
     b.addEventListener('click',()=>swapStep(parseInt(b.dataset.swap,10)));
@@ -2562,7 +2588,16 @@ function paintPlan(){
     window.scrollTo({top:0,behavior:'smooth'});
     toast('완료! 오늘 기록에 저장했어요');
   });
+  document.getElementById('saveAsBtn').addEventListener('click',()=>{
+    saveAsMode=true;
+    document.getElementById('srName').value=(lastPlan.name?lastPlan.name+' 사본':`${label||'내 루틴'} ${estimateMinutes(plan)}분`);
+    document.getElementById('srCopyWrap').style.display='none';
+    document.getElementById('srTitle').textContent='다른 이름으로 저장';
+    document.getElementById('ovSaveRoutine').classList.add('show');
+  });
   document.getElementById('saveRoutineBtn').addEventListener('click',()=>{
+    saveAsMode=false;
+    document.getElementById('srTitle').textContent='루틴 저장';
     if(sessionIdx!==null && editingRoutineIdx===null) editingRoutineIdx=sessionIdx;
     const existing=(editingRoutineIdx!==null)?savedRoutines[editingRoutineIdx]:null;
     document.getElementById('srName').value = existing? existing.name : (lastPlan.name || `${label||'내 루틴'} ${estimateMinutes(plan)}분`);
@@ -2846,7 +2881,7 @@ document.getElementById('prevM').addEventListener('click',()=>{calCursor.setMont
 document.getElementById('nextM').addEventListener('click',()=>{calCursor.setMonth(calCursor.getMonth()+1);renderCalendar();});
 
 /* ---- 루틴 저장 / 불러오기 ---- */
-let lastPlan=null, renamingIdx=null, editingRoutineIdx=null;
+let lastPlan=null, renamingIdx=null, editingRoutineIdx=null, saveAsMode=false;
 
 document.querySelectorAll('.sub-tab').forEach(t=>{
   t.addEventListener('click',()=>{
@@ -2902,6 +2937,12 @@ document.getElementById('srSave').addEventListener('click',async()=>{
   }
 
   if(!lastPlan){toast('저장할 루틴이 없어요');return;}
+
+  // 다른 이름으로 새로 저장
+  if(saveAsMode){
+    document.getElementById('srSaveAs').click();
+    return;
+  }
 
   // 불러온 루틴을 수정해 저장하는 경우 → 덮어쓰기
   if(editingRoutineIdx!==null){
@@ -3626,7 +3667,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'16', d:'2026-07-24', body:'다른 이름으로 저장 버튼이 보이지 않던 문제 수정\n내가 추가한 동작 표시(MINE)를 청록색으로 변경 — 계열 표시와 구분\n운동 일지에 검색 추가 (동작 이름·내용·날짜, 검색어 강조)'}
+  {v:'18', d:'2026-07-24', body:'색상을 앰버 한 계열로 통일하고 톤만 다르게 조정\n한 화면 안에서 글씨색이 겹치지 않도록 전면 정리\nMINE 표시를 가장 연한 톤으로 변경'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
