@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atlas">
 <meta name="theme-color" content="#0E0F11">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230E0F11'/><g fill='none' stroke-linecap='round'><path d='M42 122 Q62 62 90 62 T138 100' stroke='%234A4642' stroke-width='3'/><path d='M42 134 Q66 78 96 78 T138 112' stroke='%23F0ECE4' stroke-width='3.6'/><path d='M42 146 Q70 94 102 94 T138 124' stroke='%23C9663B' stroke-width='3.6'/></g><circle cx='138' cy='124' r='6' fill='%23C9663B'/></svg>">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230E0F11'/><g fill='none' stroke-linecap='round'><path d='M42 122 Q62 62 90 62 T138 100' stroke='%234A4642' stroke-width='3'/><path d='M42 134 Q66 78 96 78 T138 112' stroke='%23F0ECE4' stroke-width='3.6'/><path d='M42 146 Q70 94 102 94 T138 124' stroke='%23C9663B' stroke-width='3.6'/></g><circle cx='138' cy='124' r='6' fill='%23C9663B'/></svg>">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <title>結 GYEOL — Movement Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3668,7 +3668,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'22', d:'2026-11-03', body:'기록 버튼이 도감에 없는 동작이에요 로 막히던 문제 수정\n이름의 공백·표기 차이를 무시하고 매칭, 없으면 도감에 자동 추가\n루틴 완료 시 횟수 집계도 같은 방식으로 보강'}
+  {v:'23', d:'2026-11-04', body:'앱 아이콘을 실제 PNG 파일로 교체 — iOS 홈 화면에서 아이콘이 적용되지 않던 문제 해결'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
