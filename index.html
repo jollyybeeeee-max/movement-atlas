@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Atlas">
 <meta name="theme-color" content="#0E0F11">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230E0F11'/%3E%3Ccircle cx='90' cy='42' r='15' fill='none' stroke='%23C9663B' stroke-width='5'/%3E%3Cpath d='M90 58 L90 108 M60 76 L90 68 L120 76 M90 108 L72 148 M90 108 L108 148' fill='none' stroke='%23F0ECE4' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%230E0F11'/%3E%3Ccircle cx='90' cy='42' r='15' fill='none' stroke='%23C9663B' stroke-width='5'/%3E%3Cpath d='M90 58 L90 108 M60 76 L90 68 L120 76 M90 108 L72 148 M90 108 L108 148' fill='none' stroke='%23F0ECE4' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230E0F11'/><g fill='none' stroke-linecap='round'><path d='M42 122 Q62 62 90 62 T138 100' stroke='%234A4642' stroke-width='3'/><path d='M42 134 Q66 78 96 78 T138 112' stroke='%23F0ECE4' stroke-width='3.6'/><path d='M42 146 Q70 94 102 94 T138 124' stroke='%23C9663B' stroke-width='3.6'/></g><circle cx='138' cy='124' r='6' fill='%23C9663B'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230E0F11'/><g fill='none' stroke-linecap='round'><path d='M42 122 Q62 62 90 62 T138 100' stroke='%234A4642' stroke-width='3'/><path d='M42 134 Q66 78 96 78 T138 112' stroke='%23F0ECE4' stroke-width='3.6'/><path d='M42 146 Q70 94 102 94 T138 124' stroke='%23C9663B' stroke-width='3.6'/></g><circle cx='138' cy='124' r='6' fill='%23C9663B'/></svg>">
 <title>結 GYEOL — Movement Atlas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2525,7 +2525,7 @@ function paintPlan(){
       const i=parseInt(b.dataset.save,10);
       const it=lastPlan.plan[i];
       if(!it.logW && !it.logR && !it.logS){ toast('무게·횟수·세트 중 하나는 입력해주세요'); return; }
-      const ok=await logToAtlas(it.name, it.logW, it.logR, it.logS);
+      const ok=await logToAtlas(it.name, it.logW, it.logR, it.logS, it.role);
       if(ok){
         it.logged=true; it.done=true;
         b.classList.add('saved'); b.textContent='기록됨';
@@ -2556,7 +2556,8 @@ function paintPlan(){
     // 수행한 동작마다 횟수 +1
     const mine=allItems();
     plan.forEach(p=>{
-      const hit=mine.find(x=>x.name===p.name);
+      let hit=mine.find(x=>x.name===p.name);
+      if(!hit){ const n=normName(p.name); hit=mine.find(x=>normName(x.name)===n); }
       if(hit) counts[hit.id]=(counts[hit.id]||0)+1;
     });
     await saveCounts();
@@ -3667,7 +3668,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'20', d:'2026-07-24', body:'도감 계열 표시를 앰버로, MINE을 연한 앰버로 변경\n루틴 세트·횟수를 연한 앰버로 변경 — 전체적으로 차분하게 정리'}
+  {v:'22', d:'2026-11-03', body:'기록 버튼이 도감에 없는 동작이에요 로 막히던 문제 수정\n이름의 공백·표기 차이를 무시하고 매칭, 없으면 도감에 자동 추가\n루틴 완료 시 횟수 집계도 같은 방식으로 보강'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
@@ -3769,9 +3770,28 @@ function startSession(idx){
 }
 
 /* 동작 기록을 도감에 반영 */
-async function logToAtlas(name, weight, reps, sets){
-  const target=allItems().find(x=>x.name===name);
-  if(!target){ toast('도감에 없는 동작이에요'); return false; }
+async function logToAtlas(name, weight, reps, sets, roleHint){
+  const items=allItems();
+  // 1) 정확히 일치  2) 공백·표기 차이 무시  3) 부분 일치
+  let target=items.find(x=>x.name===name);
+  if(!target){
+    const n=normName(name);
+    target=items.find(x=>normName(x.name)===n);
+  }
+  if(!target){
+    const n=normName(name);
+    target=items.find(x=>n.length>=3 && (normName(x.name).includes(n)||n.includes(normName(x.name))));
+  }
+  // 4) 그래도 없으면 도감에 자동 추가
+  if(!target){
+    const cat=(CATS.find(c=>c.label===roleHint)||{}).key || guessCat(name) || 'glute';
+    const uid='x'+Math.random().toString(36).slice(2,9);
+    userAdded.push({uid,cat,name,cue:'(루틴에서 추가된 동작)',record:''});
+    await saveEx();
+    target=allItems().find(x=>'u:'+uid===x.id);
+    if(!target){ toast('기록하지 못했어요'); return false; }
+    toast('도감에 '+name+' 추가함');
+  }
   const id=target.id;
 
   // 표시용 기록 문구 갱신
