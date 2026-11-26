@@ -532,6 +532,12 @@
     padding:9px 0;font-size:12.5px;color:var(--bone-dim);font-weight:300;
   }
   .cal-sum-row b{font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--bone);}
+  .sync-box{border-top:1px solid var(--hair);margin-top:18px;padding-top:18px;}
+  .sync-box input{width:100%;padding:11px 0;background:transparent;border:0;border-bottom:1px solid var(--hair);color:var(--bone);font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;}
+  .sync-row{display:flex;gap:8px;margin-top:12px;}
+  .sync-row button{flex:1;padding:12px;border:1px solid var(--hair);background:transparent;color:var(--bone-dim);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.12em;cursor:pointer;}
+  .sync-row button.main{border-color:var(--ember);color:var(--ember);}
+  .sync-meta{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--bone-faint);margin-top:10px;letter-spacing:0.04em;line-height:1.6;}
   .pick.sm{font-size:10.5px;padding:9px 14px;}  /* ===== meals ===== */
   .rings{
     display:grid;grid-template-columns:repeat(4,1fr);
@@ -2754,8 +2760,10 @@ function renderCalSummary(y,m){
   });
   if(total===0) h+=`<div class="void-note" style="padding:26px 0">이번 달 기록 없음</div>`;
   h+=`<button class="save-routine-btn" id="shareMonthBtn">이번 달 기록 공유하기</button>`;
+  h+=syncBoxHtml();
   h+=`</div>`;
   document.getElementById('calSummary').innerHTML=h;
+  wireSyncBox();
   const smb=document.getElementById('shareMonthBtn');
   if(smb) smb.addEventListener('click',shareMonthly);
 }
@@ -3825,11 +3833,108 @@ async function logToAtlas(name, weight, reps, sets, roleHint){
   return true;
 }
 
+/* ---- 구글 시트 연동 (활동·운동 기록 → 캘린더) ----
+   시트에서 온 기록은 src:'sheet' 표시. 동기화할 때마다 시트 기록만 새로 덮어쓰고,
+   앱에서 직접 넣은 기록(src 없음)은 그대로 둔다. */
+const SYNC_KEY='atlas_sheet_sync_v1';
+let syncCfg={url:'',last:'',count:0};
+function loadSync(){
+  return Store.get(SYNC_KEY).then(v=>{if(v){try{syncCfg=Object.assign(syncCfg,JSON.parse(v));}catch(e){}}}).catch(()=>{});
+}
+function saveSync(){return Store.set(SYNC_KEY,JSON.stringify(syncCfg));}
+function sheetAct(name,part){
+  const n=String(name||''), s=n+' '+String(part||'');
+  if(/PT/i.test(n)) return 'pt';
+  if(/필라테스|요가/.test(s)) return 'pil';
+  if(/러닝|달리기|조깅|대회/.test(s)) return 'run';
+  if(/HIIT|서킷|인터벌/i.test(s)) return 'hiit';
+  if(/스트레칭|폼롤러|마사지|L자|다리 올리기/.test(s)) return 'stretch';
+  if(/수영/.test(s)) return 'swim';
+  if(/등산/.test(s)) return 'hike';
+  if(/크로스핏/.test(s)) return 'crossfit';
+  if(/복싱/.test(s)) return 'boxing';
+  if(/클라이밍/.test(s)) return 'climb';
+  if(/걷기|자전거|바이크|페달|일립틱|유산소|스텝/.test(s)) return 'cardio';
+  if(/웨이트|근력|헬스|클래스|FISTX/i.test(s)) return 'gym';
+  return 'etc';
+}
+function recFromEntries(list){
+  return {acts:list.map(e=>e.act),entries:list,
+    memo:list.filter(e=>e.memo).map(e=>actOf(e.act).label+': '+e.memo).join('\n')};
+}
+function sheetEntry(r){
+  const detail=String(r.detail||'');
+  const km=(detail.match(/([\d.]+)\s*km/)||[])[1]||'';
+  const lo=Number(r.kcalLo)||0, hi=Number(r.kcalHi)||0;
+  const kcal=hi?((lo&&lo!==hi)?lo+'~'+hi:hi)+'kcal':'';
+  let memo=[r.name,r.part,kcal].filter(Boolean).join(' · ');
+  if(detail&&detail!=='-'&&!/^[\d.]+\s*km$/.test(detail.trim())) memo+='\n'+(detail.length>120?detail.slice(0,120)+'…':detail);
+  return {act:sheetAct(r.name,r.part),min:r.min?String(r.min):'',dist:km,memo,src:'sheet'};
+}
+function applySheetRows(rows){
+  const byDay={};
+  rows.forEach(r=>{
+    const d=String(r.date||'').slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    (byDay[d]=byDay[d]||[]).push(sheetEntry(r));
+  });
+  Object.keys(calData).forEach(k=>{
+    const list=normalizeDay(calData[k]);
+    if(!list.some(e=>e.src==='sheet')) return;
+    const keep=list.filter(e=>e.src!=='sheet');
+    if(keep.length) calData[k]=recFromEntries(keep); else delete calData[k];
+  });
+  Object.keys(byDay).forEach(k=>{
+    const manual=normalizeDay(calData[k]).filter(e=>e.src!=='sheet');
+    calData[k]=recFromEntries(manual.concat(byDay[k]));
+  });
+  return Object.keys(byDay).length;
+}
+let syncing=false;
+async function syncFromSheet(silent){
+  if(!syncCfg.url){ if(!silent) toast('연동 주소를 먼저 넣어주세요'); return; }
+  if(syncing) return; syncing=true;
+  try{
+    const res=await fetch(syncCfg.url,{cache:'no-store'});
+    const j=await res.json();
+    if(!j||!Array.isArray(j.rows)) throw new Error(j&&j.error||'bad');
+    const days=applySheetRows(j.rows);
+    syncCfg.last=new Date().toISOString(); syncCfg.count=j.rows.length;
+    await saveCal(); await saveSync();
+    renderCalendar();
+    if(!silent) toast('시트 기록 '+j.rows.length+'건 · '+days+'일 반영');
+  }catch(e){
+    if(!silent) toast('불러오기 실패 — 주소를 확인해주세요');
+  }finally{ syncing=false; }
+}
+function syncBoxHtml(){
+  const t=syncCfg.last?new Date(syncCfg.last):null;
+  const when=t?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} · ${syncCfg.count}건`:'아직 동기화 안 함';
+  return `<div class="sync-box"><div class="label" style="margin-bottom:6px">Sheet Sync</div>
+    <input id="syncUrl" type="url" placeholder="Apps Script 웹앱 주소 붙여넣기" value="${esc(syncCfg.url||'')}">
+    <div class="sync-row"><button id="syncSave">주소 저장</button><button class="main" id="syncNow">지금 불러오기</button></div>
+    <div class="sync-meta">마지막 동기화: ${when}<br>앱을 열 때마다 자동으로 불러와요. 시트에서 온 기록은 다음 동기화 때 시트 내용으로 다시 바뀌어요.</div></div>`;
+}
+function wireSyncBox(){
+  const sv=document.getElementById('syncSave'), nw=document.getElementById('syncNow');
+  if(sv) sv.addEventListener('click',async()=>{
+    syncCfg.url=document.getElementById('syncUrl').value.trim();
+    await saveSync(); toast(syncCfg.url?'주소 저장 완료':'연동 해제');
+    if(syncCfg.url) syncFromSheet(false);
+  });
+  if(nw) nw.addEventListener('click',()=>{
+    const v=document.getElementById('syncUrl').value.trim();
+    if(v&&v!==syncCfg.url){ syncCfg.url=v; saveSync(); }
+    syncFromSheet(false);
+  });
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') syncFromSheet(true); });
+
 /* ---- init ---- */
 renderPickers();
 tryRoutine();
-Promise.all([loadEx(),loadLogs(),loadCal(),loadOverrides(),loadPhotos(),loadRoutines(),loadWeights(),loadCounts(),loadGoal(),loadStatus()])
-  .then(()=>{renderAtlas();renderCalendar();paintLede();});
+Promise.all([loadEx(),loadLogs(),loadCal(),loadOverrides(),loadPhotos(),loadRoutines(),loadWeights(),loadCounts(),loadGoal(),loadStatus(),loadSync()])
+  .then(()=>{renderAtlas();renderCalendar();paintLede();syncFromSheet(true);});
 </script>
 </body>
 </html>
