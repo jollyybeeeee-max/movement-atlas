@@ -3858,6 +3858,16 @@ function sheetAct(name,part){
   if(/웨이트|근력|헬스|클래스|FISTX/i.test(s)) return 'gym';
   return 'etc';
 }
+function parseSheetDate(v){
+  const s=String(v==null?'':v).trim();
+  const p2=n=>String(n).padStart(2,'0');
+  let m=s.match(/^(\d{4})\s*[-.\/년]\s*(\d{1,2})\s*[-.\/월]\s*(\d{1,2})/);
+  if(m) return m[1]+'-'+p2(m[2])+'-'+p2(m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return m[3]+'-'+p2(m[1])+'-'+p2(m[2]);
+  const t=new Date(s);
+  return isNaN(t)?'':ymd(t);
+}
 function recFromEntries(list){
   return {acts:list.map(e=>e.act),entries:list,
     memo:list.filter(e=>e.memo).map(e=>actOf(e.act).label+': '+e.memo).join('\n')};
@@ -3874,8 +3884,8 @@ function sheetEntry(r){
 function applySheetRows(rows){
   const byDay={};
   rows.forEach(r=>{
-    const d=String(r.date||'').slice(0,10);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const d=parseSheetDate(r.date);
+    if(!d) return;
     (byDay[d]=byDay[d]||[]).push(sheetEntry(r));
   });
   Object.keys(calData).forEach(k=>{
@@ -3899,7 +3909,7 @@ async function syncFromSheet(silent){
     const j=await res.json();
     if(!j||!Array.isArray(j.rows)) throw new Error(j&&j.error||'bad');
     const days=applySheetRows(j.rows);
-    syncCfg.last=new Date().toISOString(); syncCfg.count=j.rows.length;
+    syncCfg.last=new Date().toISOString(); syncCfg.count=j.rows.length; syncCfg.days=days;
     await saveCal(); await saveSync();
     renderCalendar();
     if(!silent) toast('시트 기록 '+j.rows.length+'건 · '+days+'일 반영');
@@ -3909,7 +3919,7 @@ async function syncFromSheet(silent){
 }
 function syncBoxHtml(){
   const t=syncCfg.last?new Date(syncCfg.last):null;
-  const when=t?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} · ${syncCfg.count}건`:'아직 동기화 안 함';
+  const when=t?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} · ${syncCfg.count}건 → ${syncCfg.days||0}일 반영`:'아직 동기화 안 함';
   return `<div class="sync-box"><div class="label" style="margin-bottom:6px">Sheet Sync</div>
     <input id="syncUrl" type="url" placeholder="Apps Script 웹앱 주소 붙여넣기" value="${esc(syncCfg.url||'')}">
     <div class="sync-row"><button id="syncSave">주소 저장</button><button class="main" id="syncNow">지금 불러오기</button></div>
