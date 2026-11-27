@@ -3879,6 +3879,7 @@ function saveSync(){return Store.set(SYNC_KEY,JSON.stringify(syncCfg));}
 function sheetAct(name,part){
   const n=String(name||''), s=n+' '+String(part||'');
   if(/PT/i.test(n)) return 'pt';
+  if(/걷기|워킹|러닝머신|트레드밀/.test(s)&&!/달리기|조깅|대회/.test(s)) return 'cardio';
   if(/필라테스|요가/.test(s)) return 'pil';
   if(/러닝|달리기|조깅|대회/.test(s)) return 'run';
   if(/HIIT|서킷|인터벌/i.test(s)) return 'hiit';
@@ -3939,6 +3940,21 @@ function applySheetRows(rows){
   Object.keys(byDay).forEach(k=>{
     calData[k]=recFromEntries(normalizeDay(calData[k]).concat(byDay[k]));
   });
+  // 한 번만: 예전 연동 정리 때 비어 버린 지난 날짜를 시트 기록으로 되살린다(비어 있는 날만, 이후엔 직접 입력한 기록처럼 유지).
+  if(!syncCfg.backfilled){
+    const past={};
+    rows.forEach(r=>{
+      const d=parseSheetDate(r.date);
+      if(!d||d>=from) return;
+      const e=sheetEntry(r); e.src='sheet-past';
+      (past[d]=past[d]||[]).push(e);
+    });
+    Object.keys(past).forEach(k=>{
+      if(normalizeDay(calData[k]).length) return;
+      calData[k]=recFromEntries(past[k]);
+    });
+    syncCfg.backfilled=true;
+  }
   return Object.keys(byDay).length;
 }
 let syncing=false;
