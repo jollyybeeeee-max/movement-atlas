@@ -3921,34 +3921,25 @@ function sheetEntry(r){
 }
 const SYNC_FROM_DEFAULT='2026-11-27';
 function applySheetRows(rows){
-  // 11/27부터의 새 기록만 한 번씩 가져온다. 이미 가져온 기록(앱에서 고치거나 지운 것 포함)은 다시 건드리지 않는다.
+  // 11/27 이전 날짜는 건드리지 않는다(직접 입력한 기록과 중복 방지).
+  // 11/27부터는 시트가 기준: 시트 기록을 매번 새로 반영(수정·추가 모두 따라감). 직접 입력한 기록은 유지.
   const from=syncCfg.from||SYNC_FROM_DEFAULT; syncCfg.from=from;
-  const seen=new Set(Array.isArray(syncCfg.seen)?syncCfg.seen:[]);
-  if(!syncCfg.cleaned){
-    // 예전 방식(전체 덮어쓰기)으로 들어온 시트 기록만 한 번 정리. 직접 입력한 기록은 그대로.
-    Object.keys(calData).forEach(k=>{
-      const list=normalizeDay(calData[k]);
-      if(!list.some(e=>e.src==='sheet')) return;
-      const keep=list.filter(e=>e.src!=='sheet');
-      if(keep.length) calData[k]=recFromEntries(keep); else delete calData[k];
-    });
-    seen.clear(); syncCfg.cleaned=true;
-  }
-  const added={};
+  const byDay={};
   rows.forEach(r=>{
     const d=parseSheetDate(r.date);
     if(!d||d<from) return;
-    const sid=[d,String(r.name||'').trim(),String(r.min||'')].join('|');
-    if(seen.has(sid)) return;
-    seen.add(sid);
-    const e=sheetEntry(r); e.sid=sid;
-    (added[d]=added[d]||[]).push(e);
+    (byDay[d]=byDay[d]||[]).push(sheetEntry(r));
   });
-  Object.keys(added).forEach(k=>{
-    calData[k]=recFromEntries(normalizeDay(calData[k]).concat(added[k]));
+  Object.keys(calData).forEach(k=>{
+    const list=normalizeDay(calData[k]);
+    if(!list.some(e=>e.src==='sheet')) return;
+    const keep=list.filter(e=>e.src!=='sheet');
+    if(keep.length) calData[k]=recFromEntries(keep); else delete calData[k];
   });
-  syncCfg.seen=[...seen];
-  return Object.keys(added).length;
+  Object.keys(byDay).forEach(k=>{
+    calData[k]=recFromEntries(normalizeDay(calData[k]).concat(byDay[k]));
+  });
+  return Object.keys(byDay).length;
 }
 let syncing=false;
 async function syncFromSheet(silent){
@@ -3962,18 +3953,18 @@ async function syncFromSheet(silent){
     syncCfg.last=new Date().toISOString(); syncCfg.count=j.rows.length; syncCfg.days=days;
     await saveCal(); await saveSync();
     renderCalendar();
-    if(!silent) toast(days?'새 기록 '+days+'일 추가':'새 기록 없음');
+    if(!silent) toast(days?'시트 기록 '+days+'일 반영':'반영할 기록 없음');
   }catch(e){
     if(!silent) toast('불러오기 실패 — 주소를 확인해주세요');
   }finally{ syncing=false; }
 }
 function syncBoxHtml(){
   const t=syncCfg.last?new Date(syncCfg.last):null;
-  const when=t?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} · 새로 ${syncCfg.days||0}일 추가`:'아직 동기화 안 함';
+  const when=t?`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')} · ${syncCfg.days||0}일 반영`:'아직 동기화 안 함';
   return `<div class="sync-box"><div class="label" style="margin-bottom:6px">Sheet Sync</div>
     <input id="syncUrl" type="url" placeholder="Apps Script 웹앱 주소 붙여넣기" value="${esc(syncCfg.url||'')}">
     <div class="sync-row"><button id="syncSave">주소 저장</button><button class="main" id="syncNow">지금 불러오기</button></div>
-    <div class="sync-meta">마지막 동기화: ${when}<br>${(syncCfg.from||SYNC_FROM_DEFAULT).slice(5).replace('-','/')}부터의 새 기록만 한 번씩 가져와요. 이미 들어온 기록과 직접 입력한 기록은 덮어쓰지 않아요.</div></div>`;
+    <div class="sync-meta">마지막 동기화: ${when}<br>${(syncCfg.from||SYNC_FROM_DEFAULT).slice(5).replace('-','/')}부터의 시트 기록을 가져와요. 그 전 날짜와 직접 입력한 기록은 건드리지 않아요.</div></div>`;
 }
 function wireSyncBox(){
   const sv=document.getElementById('syncSave'), nw=document.getElementById('syncNow');
