@@ -1459,6 +1459,14 @@
     </div>
 
     <div class="set-group">
+      <div class="set-row" id="setSync">
+        <span class="set-row-name">시트 연동</span>
+        <span class="set-row-val" id="setSyncVal"></span>
+        <span class="set-row-arrow">›</span>
+      </div>
+    </div>
+
+    <div class="set-group">
       <div class="set-row" id="setExport">
         <span class="set-row-name">백업 내보내기</span>
         <span class="set-row-arrow">›</span>
@@ -1479,6 +1487,16 @@
 
     <div class="acts">
       <button class="btn btn-g" id="setClose" style="flex:1">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovSync">
+  <div class="sheet">
+    <h3>시트 연동</h3>
+    <div id="syncBoxWrap"></div>
+    <div class="acts">
+      <button class="btn btn-g" id="syncClose" style="flex:1">닫기</button>
     </div>
   </div>
 </div>
@@ -2760,10 +2778,8 @@ function renderCalSummary(y,m){
   });
   if(total===0) h+=`<div class="void-note" style="padding:26px 0">이번 달 기록 없음</div>`;
   h+=`<button class="save-routine-btn" id="shareMonthBtn">이번 달 기록 공유하기</button>`;
-  h+=syncBoxHtml();
   h+=`</div>`;
   document.getElementById('calSummary').innerHTML=h;
-  wireSyncBox();
   const smb=document.getElementById('shareMonthBtn');
   if(smb) smb.addEventListener('click',shareMonthly);
 }
@@ -3676,7 +3692,7 @@ document.getElementById('pickCancel').addEventListener('click',()=>ovPick.classL
 
 /* ===== 버전 기록 ===== */
 const CHANGELOG=[
-  {v:'23', d:'2026-11-04', body:'앱 아이콘을 실제 PNG 파일로 교체 — iOS 홈 화면에서 아이콘이 적용되지 않던 문제 해결'}
+  {v:'24', d:'2026-11-26', body:'시트 연동을 캘린더 하단에서 설정 안으로 이동 — 화면이 깔끔해지고 자동 동기화는 그대로\n설정에서 마지막 동기화 시각을 한눈에 확인'}
 ];
 const APP_VERSION=CHANGELOG[0].v;
 
@@ -3692,6 +3708,14 @@ function paintSettings(){
   document.getElementById('setStatusVal').textContent=
     wp.length?wp.map(b=>b.label).join(' · '):'이상 없음';
   document.getElementById('setVersionVal').textContent='Vol. '+APP_VERSION;
+  const sv=document.getElementById('setSyncVal');
+  if(sv){
+    if(!syncCfg.url) sv.textContent='연동 안 함';
+    else if(syncCfg.last){
+      const t=new Date(syncCfg.last);
+      sv.textContent=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    } else sv.textContent='연동됨';
+  }
 }
 function openSettings(){ paintSettings(); ovSettings.classList.add('show'); }
 
@@ -3703,6 +3727,16 @@ document.getElementById('setGoal').addEventListener('click',()=>{ovSettings.clas
 document.getElementById('setStatus').addEventListener('click',()=>{ovSettings.classList.remove('show');openStatus();});
 document.getElementById('setExport').addEventListener('click',()=>{ovSettings.classList.remove('show');document.getElementById('btnExport').click();});
 document.getElementById('setImport').addEventListener('click',()=>{ovSettings.classList.remove('show');document.getElementById('importFile').click();});
+
+const ovSync=document.getElementById('ovSync');
+document.getElementById('setSync').addEventListener('click',()=>{
+  document.getElementById('syncBoxWrap').innerHTML=syncBoxHtml();
+  wireSyncBox();
+  ovSettings.classList.remove('show');
+  ovSync.classList.add('show');
+});
+ovSync.addEventListener('click',e=>{if(e.target===ovSync)ovSync.classList.remove('show');});
+document.getElementById('syncClose').addEventListener('click',()=>ovSync.classList.remove('show'));
 
 document.getElementById('setVersion').addEventListener('click',()=>{
   document.getElementById('versionList').innerHTML=CHANGELOG.map((c,i)=>`
