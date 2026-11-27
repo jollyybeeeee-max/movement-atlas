@@ -3912,7 +3912,11 @@ function sheetEntry(r){
   const lo=Number(r.kcalLo)||0, hi=Number(r.kcalHi)||0;
   const kcal=hi?((lo&&lo!==hi)?lo+'~'+hi:hi)+'kcal':'';
   let memo=[r.name,r.part,kcal].filter(Boolean).join(' · ');
-  if(detail&&detail!=='-'&&!/^[\d.]+\s*km$/.test(detail.trim())) memo+='\n'+(detail.length>120?detail.slice(0,120)+'…':detail);
+  if(detail&&detail!=='-'&&!/^[\d.]+\s*km$/.test(detail.trim())){
+    // 동작 구분: ' / ' 또는 시트 셀 안 줄바꿈 → 한 줄에 동작 하나
+    const lines=detail.split(/\s*\/\s+|\s*\n\s*/).map(x=>x.trim()).filter(Boolean);
+    memo+='\n'+lines.map(x=>'· '+x).join('\n');
+  }
   return {act:sheetAct(r.name,r.part),min:r.min?String(r.min):'',dist:km,memo,src:'sheet'};
 }
 function applySheetRows(rows){
